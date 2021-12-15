@@ -126,30 +126,3 @@ if __name__ == '__main__':
 ############################################################################
 
 
-# In[3]:
-
-
-# In[6]:
-
-
-# AS, PV = [], []
-# for timelineObject in load['timelineObjects']:
-#    if 'activitySegment' in timelineObject.keys():
-#        AS.append(timelineObject['activitySegment'])
-#    else:
-#        PV.append(timelineObject['placeVisit'])
-
-
-for ASObject in AS:  # teścik
-    ASDict = addNiceDictToBigNiceDict(ASDict, niceASDict(ASObject))
-pd.DataFrame(ASDict)
-
-# In[32]:
-
-
-dTest = {key: [] for key in POINTS_KEYS}
-for ASObj in AS:
-    dTest = concatBigDicts(dTest, points(ASObj))
-pd.DataFrame(dTest)
-
-# In[38]:
