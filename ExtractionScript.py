@@ -23,6 +23,7 @@ def niceASDict(ActivitySegmentObj):
     t['StartingtimeStampInMS'], t['EndtimeStampInMS'] = durationToTimeStampsMS(ActivitySegmentObj['duration'])
     t['ActivityType'] = ActivitySegmentObj['activityType']
     t['Distance'] = ActivitySegmentObj['distance']
+    t['User'] = ActivitySegmentObj['User']
 
     return t
 
@@ -44,6 +45,7 @@ def points(Object):
             returnDict['Longitude'].append(point['lngE7'])
             returnDict['Latitude'].append(point['latE7'])
             returnDict['TimeStampInMS'].append(point['timestampMs'])
+            returnDict['User'].append(Object['User'])
     except KeyError:  # niektore aktywnosci nie maja w ogole punktow
         return {key: [] for key in POINTS_KEYS}
     return returnDict
@@ -55,7 +57,7 @@ def concatBigDicts(dict1, dict2):
         try:
             newDict[key] = dict1[key] + dict2[key]
         except KeyError:
-            raise exception('Keys in dicts dont match')
+            raise Exception('Keys in dicts dont match')
     return newDict
 
 
@@ -65,6 +67,7 @@ def nicePVDict(PlaceVisitObj):
     d['PlaceId'] = PlaceVisitObj['location']['placeId']
     d['Name'] = PlaceVisitObj['location']['name']
     d['StartTimeStampInMS'], d['EndTimeStampInMS'] = durationToTimeStampsMS(PlaceVisitObj['duration'])
+    d['User'] = PlaceVisitObj['User']
     return d
 
 
@@ -75,18 +78,21 @@ AS_KEYS = ['StartingLongitude',
            'StartingtimeStampInMS',
            'EndtimeStampInMS',
            'ActivityType',
-           'Distance']  # kolumny w as.csv
+           'Distance',
+           'User']  # kolumny w as.csv
 
 POINTS_KEYS = ['Longitude',
                'Latitude',
-               'TimeStampInMS']
+               'TimeStampInMS',
+               'User']
 
 PV_KEYS = ['PlaceId',
            'Longitude',
            'Latitude',
            'StartTimeStampInMS',
            'EndTimeStampInMS',
-           'Name']
+           'Name',
+           'User']
 
 if __name__ == '__main__':
     if len(sys.argv) < 4:
@@ -96,15 +102,18 @@ if __name__ == '__main__':
     CharacteristicFileName = sys.argv[2]
     JSONlocs = sys.argv[3:]
     AS, PV = [], []
+
     for JSONloc in JSONlocs:
-        print(JSONlocs, "\n")
+        User = JSONloc.split('/')[-1][:5]
         with open(JSONloc, encoding='utf-8') as data:
             load = json.load(data)
         for timelineObject in load['timelineObjects']:
             if 'activitySegment' in timelineObject.keys():
                 AS.append(timelineObject['activitySegment'])
+                AS[len(AS)-1]['User'] = User
             else:
                 PV.append(timelineObject['placeVisit'])
+                PV[len(PV) - 1]['User'] = User
 
     PointsDict = {key: [] for key in POINTS_KEYS}
     ASDict = {key: [] for key in AS_KEYS}
