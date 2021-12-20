@@ -1,14 +1,15 @@
-
 library(shiny)
 library(dplyr)
 library(sp)
 library(maptools)
 library(leaflet)
+library(shinyTime)
 
 df <- read.csv("Pointstest.csv")
 df <- df %>% mutate(long = Longitude / 1e7, lat = Latitude / 1e7) %>% 
-    mutate(time = as.Date(as.POSIXct(TimeStampInMS / 1000, origin="1970-01-01")))
-
+    mutate(data = as.Date(as.POSIXct(TimeStampInMS / 1000, origin="1970-01-01"))) %>%
+    mutate(hm = format(as.POSIXct(TimeStampInMS / 1000, origin="1970-01-01"), "%H:%M"))
+head(df)
 
 ui <- fluidPage(
 
@@ -18,10 +19,12 @@ ui <- fluidPage(
         sidebarPanel(
             sliderInput("DatesMerge",
                         "Choose date:",
-                        min = min(df$time),
-                        max = max(df$time),
-                        value = median(df$time),
-                        timeFormat="%Y-%m-%d")
+                        min = min(df$data),
+                        max = max(df$data),
+                        value = median(df$data),
+                        timeFormat="%Y-%m-%d"),
+            timeInput("timeS", "Start time:", minute.steps = 5),
+            timeInput("timeE", "End time:", minute.steps = 5)
         ),
 
         mainPanel(
@@ -34,14 +37,42 @@ ui <- fluidPage(
 server <- function(input, output) {
 
     output$distPlot <- renderLeaflet({
-        data <- df %>% filter(time == input$DatesMerge)
-        map3 <- leaflet(data) %>% addTiles() %>% addMarkers(~long, ~lat, popup = ~X)
-        nn <- nrow(data)-1
+        df2 <- df %>% 
+            filter(data == input$DatesMerge &
+                       hm > format(as.POSIXct(input$timeS), "%H:%M") &
+                       hm < format(as.POSIXct(input$timeE), "%H:%M"))
+        map3 <- leaflet(df2) %>% addTiles() %>% addMarkers(~long, ~lat, popup = ~X)
+        nn <- nrow(df2)-1
         for (i in 1:nn) 
             map3 <- map3 %>% 
-            addPolylines(lat=c(data[i,]$lat,data[i+1,]$lat),lng=c(data[i,]$long,data[i+1,]$long))
-        map3
+            addPolylines(lat=c(df2[i,]$lat,df2[i+1,]$lat),lng=c(df2[i,]$long,df2[i+1,]$long))
+        
+        esri <- grep("^Esri", providers, value = TRUE)
+        esri <- esri[c(2,5)]
+        
+        for (provider in esri) {
+            map3 <- map3 %>% addProviderTiles(provider, group = provider)
+        }
+        
+        map3 %>%
+            addLayersControl(baseGroups = names(esri),
+                             options = layersControlOptions(collapsed = FALSE)) %>%
+            addMiniMap(tiles = esri[[1]], toggleDisplay = TRUE,
+                       position = "bottomleft") %>%
+            htmlwidgets::onRender("
+                function(el, x) {
+                    var myMap = this;
+                    myMap.on('baselayerchange',
+                        function (e) {
+                            myMap.minimap.changeLayer(L.tileLayer.provider(e.name));
+                        })
+                }")
+        
+        
+        
+        
     })
+    
 }
 
 
