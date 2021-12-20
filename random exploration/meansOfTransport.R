@@ -1,19 +1,18 @@
 
-punkty <- read.csv("Pointstest.csv")
-activity <- read.csv("ActivitySegmenttest.csv")
+activity <- read.csv("ActivitySegmenttestData.csv")
 
 library(dplyr)
 library(ggplot2)
 
 
 act <- activity %>% 
-  group_by(ActivityType) %>% 
+  group_by(User, ActivityType) %>% 
   summarise(odl = sum(Distance)/1000, czas = (sum(EndtimeStampInMS)-sum(StartingtimeStampInMS))/(1000*60*60)  )
 
 library(ggrepel)
 
 act %>% 
-  ggplot( aes(x = odl, y=czas, label = ActivityType) ) +
+  ggplot( aes(x = odl, y=czas, label = ActivityType, color=User) ) +
   geom_point() +
   scale_x_continuous(limits = c(0, 200)) +
   scale_y_continuous(limits = c(0, 18)) +
