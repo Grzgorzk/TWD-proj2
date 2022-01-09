@@ -4,11 +4,30 @@ library(sp)
 library(maptools)
 library(leaflet)
 library(shinyTime)
+library(ggplot2)
 
-df2 <- read.csv("PlacesVisitedtestData.csv")  %>% select(-PlaceId, -X)
+activitydf <- read.csv("data/dataCSV/ActivitySegmenttestData.csv")
+
+pointsdf <- read.csv("data/dataCSV/PointstestData.csv")
+
+placevisitdf <- read.csv("data/dataCSV/PlacesVisitedtestData.csv") 
+
+activity2 <- activitydf %>%  mutate(StartingHour = format(as.POSIXct(StartingtimeStampInMS / 1000, origin="1970-01-01",tz = "Europe/Warsaw"), "%H")) %>%
+  mutate(StartingMinute = format(as.POSIXct(StartingtimeStampInMS / 1000, origin="1970-01-01",tz = "Europe/Warsaw"), "%M")) %>%
+  mutate(EndHour = format(as.POSIXct(EndtimeStampInMS / 1000, origin="1970-01-01",tz = "Europe/Warsaw"), "%H")) %>%
+  mutate(EndMinute = format(as.POSIXct(EndtimeStampInMS / 1000, origin="1970-01-01",tz = "Europe/Warsaw"	), "%M")) %>% 
+  mutate(DurationInMinutes = (EndtimeStampInMS-StartingtimeStampInMS)/60000) %>% 
+  mutate(MiddleOfActivityHour = 
+           as.numeric(format(as.POSIXct((EndtimeStampInMS+StartingtimeStampInMS)/2000, origin="1970-01-01",tz = "Europe/Warsaw"), "%H"))) %>% 
+  mutate(MiddleOfActivitiMin=as.numeric(format(as.POSIXct((EndtimeStampInMS+StartingtimeStampInMS)/2000, origin="1970-01-01",tz = "Europe/Warsaw"), "%M"))) %>% 
+  mutate(MiddleOfActivity = MiddleOfActivityHour+MiddleOfActivitiMin/60) %>% 
+  mutate(Weekday=format(as.POSIXct((EndtimeStampInMS+StartingtimeStampInMS)/2000, origin="1970-01-01",tz = "Europe/Warsaw"), "%a")) %>% 
+  mutate(dates = as.Date(as.POSIXct(StartingtimeStampInMS / 1000, origin="1970-01-01"))) 
+
+df2 <- read.csv("data/dataCSV/PlacesVisitedtestData.csv")  %>% select(-PlaceId, -X)
  
-df <- read.csv("PointstestData.csv")
-dfa <- read.csv("ActivitySegmenttestData.csv") %>% 
+df <- read.csv("data/dataCSV/PointstestData.csv")
+dfa <- read.csv("data/dataCSV/ActivitySegmenttestData.csv") %>% 
     select(-X, -Distance) %>% 
     rename(startlong = StartingLongitude, startlat = StartingLatitude,
            endlong = EndingLongitude, endlat = EndingLatitude, 
@@ -63,7 +82,7 @@ df <- df %>% mutate(ActivityColor = case_when(
 
 server <- function(input, output, session) {
 
-    output$distPlot <- renderLeaflet({
+    output$Mapka <- renderLeaflet({
         
         df2 <- df %>% 
             filter(User %in% input$users) %>%
@@ -126,6 +145,26 @@ server <- function(input, output, session) {
 
     })
     
+    output$FirstGKPlot <- renderPlot({
+      
+      
+      
+        activity3<- activity2 %>% filter(User %in% input$Users)
+      activity2$Weekday <- factor(activity2$Weekday, c("Mon","Tue","Wed", "Thu", "Fri", "Sat", "Sun"))
+      if(input$weekday=="day"){
+        ggplot(activity2, aes(y=Distance/1000, x=MiddleOfActivity, group=User, color=User, size=DurationInMinutes))+
+          geom_point()+
+          ylab("Distance in km")+
+          xlab("Middle time of activity (hours)")+
+          ylim(0,40)}
+      
+      else{
+        ggplot(activity2, aes(y=Distance/1000, x=Weekday, group=User, color=User, size=DurationInMinutes))+
+          geom_point()+
+          ylab("Distance in km")+
+          xlab("weekday of activity")
+      }
+    })
 }
 
 ui <- fluidPage(
@@ -134,8 +173,25 @@ ui <- fluidPage(
 
 
 ui2 <- fluidPage(
-    titlePanel("Page2")
-)
+    
+    # Application title
+    titlePanel("Old Faithful Geyser Data"),
+    
+    # Sidebar with a slider input for number of bins 
+    sidebarLayout(
+      sidebarPanel(
+        checkboxGroupInput("Users", "Users", c("User1", "User2"), c("User1","User2")),
+        radioButtons("weekday", "Do you want to see week perspective or day perspective?", c("week", "day"))
+
+      ),
+      
+      # Show a plot of the generated distribution
+      mainPanel(
+        plotOutput("FirstGKPlot"),
+        plotOutput("SecondGKPlot")
+      )
+    )
+  )
 
 ui3 <- fluidPage(
     titlePanel("Mapka"),
@@ -157,7 +213,7 @@ ui3 <- fluidPage(
         ),
 
         mainPanel(
-           leafletOutput("distPlot")
+           leafletOutput("Mapka")
            #leafletOutput("plot2")
         )
     )

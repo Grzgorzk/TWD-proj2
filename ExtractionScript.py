@@ -132,6 +132,4 @@ if __name__ == '__main__':
 
     Pointsdf = pd.DataFrame(PointsDict)
     Pointsdf.to_csv(targetloc + '/Points' + CharacteristicFileName + '.csv')
-############################################################################
-
 

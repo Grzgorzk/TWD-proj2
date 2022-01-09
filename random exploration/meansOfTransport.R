@@ -1,5 +1,5 @@
 
-activity <- read.csv("ActivitySegmenttestData.csv")
+activity <- read.csv("data/dataCSV/ActivitySegmenttestData.csv")
 
 library(dplyr)
 library(ggplot2)
