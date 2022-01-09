@@ -5,6 +5,11 @@ library(maptools)
 library(leaflet)
 library(shinyTime)
 library(ggplot2)
+library(forcats)
+
+library(wordcloud2)
+library(stringi)
+library(tm)
 
 activitydf <- read.csv("data/dataCSV/ActivitySegmenttestData.csv")
 
@@ -165,10 +170,71 @@ server <- function(input, output, session) {
           xlab("weekday of activity")
       }
     })
+    
+    output$TypAktywnosci <- plotly::renderPlotly({
+      
+      df <- activitydf %>% 
+        group_by(User, ActivityType) %>% 
+        summarise(odl = sum(Distance)/1000, czas = (sum(EndtimeStampInMS)-sum(StartingtimeStampInMS))/(1000*60*60)  ) %>% 
+        filter(User == input$whichUser) %>% 
+        rename(category = input$kategoria) %>% 
+        mutate(ActivityType = fct_reorder(ActivityType, category, .desc = F)) 
+      
+      p <- ggplot(df, aes(x = ActivityType, y=category) ) +
+        geom_col( ) +
+        theme_bw()+
+        scale_x_discrete(breaks=df$ActivityType,
+                         labels=stri_replace_all_fixed(df$ActivityType, '_', ' ')) +
+        coord_flip()
+      
+      if(input$kategoria == "odl"){
+        p <- p +
+          labs(title = "Distance travelled by Activity Type",
+               y = "Distance[km]",
+               x = "")
+      }else{
+        p <- p +
+          labs(title = "Time spent by Activity Type",
+               y = "Time[h]",
+               x = "")
+      }
+      
+      p
+    })
 }
 
 ui <- fluidPage(
-    titlePanel("Page1")
+    titlePanel("Page1"),
+    
+    sidebarLayout(
+      
+      sidebarPanel(
+        selectInput(
+          inputId = "whichUser",
+          label = "Choose user:",
+          choices = list("User1", "User2"),
+          selected = "User1"
+        ),
+        
+        radioButtons("kategoria", 
+                     "Select parameter:",
+                     choiceNames = c("Distance", "Time"),
+                     choiceValues = c("odl", "czas"),
+                     selected = "odl"
+        )
+      ), 
+      
+      
+      
+      
+      mainPanel(
+        shinycssloaders::withSpinner(
+          plotly::plotlyOutput("TypAktywnosci")
+        ),
+        
+        
+      )
+    )
 )
 
 
