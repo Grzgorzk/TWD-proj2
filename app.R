@@ -154,21 +154,22 @@ server <- function(input, output, session) {
       
       
       
-        activity3<- activity2 %>% filter(User %in% input$Users)
-      activity2$Weekday <- factor(activity2$Weekday, c("Mon","Tue","Wed", "Thu", "Fri", "Sat", "Sun"))
+        activity3<- activity2 %>% filter(User %in% input$Usersgk)
+      activity3$Weekday <- factor(activity3$Weekday, c("Mon","Tue","Wed", "Thu", "Fri", "Sat", "Sun"))
       if(input$weekday=="day"){
-        ggplot(activity2, aes(y=Distance/1000, x=MiddleOfActivity, group=User, color=User, size=DurationInMinutes))+
+        p<-ggplot(activity3, aes(y=Distance/1000, x=MiddleOfActivity, group=User, color=User, size=DurationInMinutes))+
           geom_point()+
           ylab("Distance in km")+
           xlab("Middle time of activity (hours)")+
           ylim(0,40)}
       
       else{
-        ggplot(activity2, aes(y=Distance/1000, x=Weekday, group=User, color=User, size=DurationInMinutes))+
+        p<-ggplot(activity3, aes(y=Distance/1000, x=Weekday, group=User, color=User, size=DurationInMinutes))+
           geom_point()+
           ylab("Distance in km")+
           xlab("weekday of activity")
       }
+      p
     })
     
     output$TypAktywnosci <- plotly::renderPlotly({
@@ -246,15 +247,14 @@ ui2 <- fluidPage(
     # Sidebar with a slider input for number of bins 
     sidebarLayout(
       sidebarPanel(
-        checkboxGroupInput("Users", "Users", c("User1", "User2"), c("User1","User2")),
-        radioButtons("weekday", "Do you want to see week perspective or day perspective?", c("week", "day"))
+        checkboxGroupInput("Usersgk", "Users", c("User1", "User2"), c("User1","User2")),
+        radioButtons("weekday", "Do you want to see week perspective or day perspective?", c("week", "day"), "day")
 
       ),
       
       # Show a plot of the generated distribution
       mainPanel(
-        plotOutput("FirstGKPlot"),
-        plotOutput("SecondGKPlot")
+        plotOutput("FirstGKPlot")
       )
     )
   )
