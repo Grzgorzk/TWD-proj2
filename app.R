@@ -274,8 +274,7 @@ ui3 <- fluidPage(
             checkboxGroupInput("users", 
                                "Users:", 
                                choices = unique(df$User),
-                               selected = 1),
-            submitButton("Update View", icon("sync"))
+                               selected = 1)
         ),
 
         mainPanel(
