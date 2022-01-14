@@ -146,31 +146,23 @@ server <- function(input, output, session) {
                 }
         }
         
-        esri <- c(grep("^OpenStreetMap.Mapnik", providers, value = TRUE),
-                  grep("^Esri.WorldImagery", providers, value = TRUE))
         
-        for (provider in esri) {
-            map3 <- map3 %>% addProviderTiles(provider, group = provider)
-        }
-        
-        
+        map3 <- map3 %>% addProviderTiles("OpenStreetMap.Mapnik", group = "Map View") %>%
+            addProviderTiles("Esri.WorldImagery", group = "Satellite View")
+
         map3 %>%
-            addLayersControl(baseGroups = names(esri),
+            addLayersControl(baseGroups = c("Map View", "Satellite View"),
                              options = layersControlOptions(collapsed = FALSE)) %>%
-            # addMiniMap(tiles = esri[[1]], toggleDisplay = TRUE,
-            #            position = "bottomleft") %>%
-            htmlwidgets::onRender("
-                function(el, x) {
-                    var myMap = this;
-                    myMap.on('baselayerchange',
-                        function (e) {
-                            myMap.minimap.changeLayer(L.tileLayer.provider(e.name));
-                        })
-                }") %>%  addLegend(
-                    position = "bottomright",
-                    colors = unique(df$ActivityColor),
-                    labels = unique(df$Activity), opacity = 1,
-                    title = "Means of transport"
+            addLegend(
+                position = "bottomright",
+                colors = unique(df$ActivityColor),
+                labels = tolower(
+                    stri_replace_all_regex(unique(df$Activity),
+                                           pattern = c("IN_|_TYPE", "_"),
+                                           replacement = c(""," "),
+                                           vectorize_all = FALSE)),
+                opacity = 1,
+                title = "Mode of transport"
                 )
         
     })
@@ -211,9 +203,9 @@ server <- function(input, output, session) {
 
 sidebar <- dashboardSidebar(
     sidebarMenu(
-        menuItem("Mapka", tabName = "mapka", icon = icon("dashboard")),
-        menuItem("GrzegorzK", tabName = "grzegorzk", icon = icon("th")),
-        menuItem("MarcelW", tabName = "marcelw", icon = icon("dashboard"))
+        menuItem("Mapka", tabName = "mapka", icon = icon("map")),
+        menuItem("GrzegorzK", tabName = "grzegorzk", icon = icon("running")),
+        menuItem("MarcelW", tabName = "marcelw", icon = icon("road"))
     )
 )
 
