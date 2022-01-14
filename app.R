@@ -209,100 +209,89 @@ server <- function(input, output, session) {
     })
 }
 
-ui <- fluidPage(
-    titlePanel("Page1"),
-    
-    sidebarLayout(
+sidebar <- dashboardSidebar(
+    sidebarMenu(
+        menuItem("Mapka", tabName = "mapka", icon = icon("dashboard")),
+        menuItem("GrzegorzK", tabName = "grzegorzk", icon = icon("th")),
+        menuItem("MarcelW", tabName = "marcelw", icon = icon("dashboard"))
+    )
+)
+
+body <- dashboardBody(
+    tabItems(
+        tabItem(tabName = "mapka",
+                fluidRow(
+                    box(
+                        dateInput("DatesMerge",
+                                  "Choose date:",
+                                  min = min(df$data),
+                                  max = max(df$data),
+                                  value = median(df$data),
+                                  format="yyyy-mm-dd"),
+                        timeInput("timeS", "Start time:", minute.steps = 5),
+                        timeInput("timeE", "End time:", minute.steps = 5),
+                        checkboxGroupInput("users", 
+                                           "Users:", 
+                                           choices = unique(df$User),
+                                           selected = 1)
+                    )),
+                fluidRow(
+                    box(
+                        leafletOutput("Mapka")
+                    )
+                )
+        ),
         
-        sidebarPanel(
-            selectInput(
-                inputId = "whichUser",
-                label = "Choose user:",
-                choices = list("User1", "User2"),
-                selected = "User1"
-            ),
-            
-            radioButtons("kategoria", 
-                         "Select parameter:",
-                         choiceNames = c("Distance", "Time"),
-                         choiceValues = c("odl", "czas"),
-                         selected = "odl"
-            )
-        ), 
-        
-        
-        
-        
-        mainPanel(
-            shinycssloaders::withSpinner(
-                plotly::plotlyOutput("TypAktywnosci")
-            ),
-            
-            
+        tabItem(tabName = "grzegorzk",
+                fluidRow(
+                    box(
+                        checkboxGroupInput("Users", "Users", c("User1", "User2"), c("User1","User2")),
+                        radioButtons("weekday", "Do you want to see week perspective or day perspective?", c("week", "day"))
+                    )
+                ),
+                fluidRow(
+                    box(
+                        plotOutput("FirstGKPlot")
+                    ),
+                    box(
+                        plotOutput("SecondGKPlot")
+                    )
+                )
+        ),
+        tabItem(tabName = "marcelw",
+                fluidRow(
+                    box(
+                        selectInput(
+                            inputId = "whichUser",
+                            label = "Choose user:",
+                            choices = list("User1", "User2"),
+                            selected = "User1"
+                        ),
+                        
+                        radioButtons("kategoria", 
+                                     "Select parameter:",
+                                     choiceNames = c("Distance", "Time"),
+                                     choiceValues = c("odl", "czas"),
+                                     selected = "odl"
+                        )
+                    )),
+                fluidRow(
+                    box(
+                        shinycssloaders::withSpinner(
+                            plotly::plotlyOutput("TypAktywnosci")
+                        )
+                    )
+                )
         )
+        
     )
 )
 
 
-ui2 <- fluidPage(
-    
-    # Application title
-    titlePanel("Old Faithful Geyser Data"),
-    
-    # Sidebar with a slider input for number of bins 
-    sidebarLayout(
-        sidebarPanel(
-            checkboxGroupInput("Users", "Users", c("User1", "User2"), c("User1","User2")),
-            radioButtons("weekday", "Do you want to see week perspective or day perspective?", c("week", "day"))
-            
-        ),
-        
-        # Show a plot of the generated distribution
-        mainPanel(
-            plotOutput("FirstGKPlot"),
-            plotOutput("SecondGKPlot")
-        )
-    )
-)
-
-ui3 <- fluidPage(
-    titlePanel("Mapka"),
-    sidebarLayout(
-        sidebarPanel(
-            dateInput("DatesMerge",
-                      "Choose date:",
-                      min = min(df$data),
-                      max = max(df$data),
-                      value = median(df$data),
-                      format="yyyy-mm-dd"),
-            timeInput("timeS", "Start time:", minute.steps = 5),
-            timeInput("timeE", "End time:", minute.steps = 5),
-            checkboxGroupInput("users", 
-                               "Users:", 
-                               choices = unique(df$User),
-                               selected = 1)
-        ),
-        
-        mainPanel(
-            leafletOutput("Mapka")
-            #leafletOutput("plot2")
-        )
-    ),
-    useShinydashboard(),
-    fluidRow(box(width = 12,
-        infoBox("New Orders", 42 * 10, icon = shiny::icon("credit-card")),
-        infoBox("progress", 69, icon = shiny::icon("list"), color = "purple"),
-        infoBox("papiez", 2137, icon = shiny::icon("thumbs-up", lib = "glyphicon"),
-                color = "yellow")
-    ))
-)
-
-app_ui <- navbarPage(
-    title = "Projekt TWD 2",
-    tabPanel("Page1", ui),
-    tabPanel("Page2", ui2),
-    tabPanel("Page3", ui3),
-    theme = bslib::bs_theme(bootswatch = "cosmo")
+app_ui <- dashboardPage(
+    dashboardHeader(title = "Nasza aplikacja"),
+    sidebar,
+    body
 )
 
 shinyApp(app_ui, server)
