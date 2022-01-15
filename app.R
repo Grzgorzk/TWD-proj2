@@ -213,7 +213,7 @@ body <- dashboardBody(
     tabItems(
         tabItem(tabName = "mapka",
                 fluidRow(
-                    box(
+                    column(width = 3, box(width = NULL,
                         dateInput("DatesMerge",
                                   "Choose date:",
                                   min = min(df$data),
@@ -225,13 +225,16 @@ body <- dashboardBody(
                         checkboxGroupInput("users", 
                                            "Users:", 
                                            choices = unique(df$User),
-                                           selected = 1)
-                    )),
-                fluidRow(
-                    box(
-                        leafletOutput("Mapka")
+                                           selected = 1, inline = TRUE)
+                    ),
+                    infoBox("New Orders", 10 * 2, icon = icon("credit-card"), width = NULL),
+                    infoBox("New Orders1", 10 * 2, icon = icon("credit-card"), width = NULL),
+                    infoBox("New Orders1", 10 * 2, icon = icon("credit-card"), width = NULL)
+                    ),
+                    box(width = 8,
+                        leafletOutput("Mapka", height = 600)
                     )
-                )
+                    )
         ),
         
         tabItem(tabName = "grzegorzk",
