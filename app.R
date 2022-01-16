@@ -178,10 +178,10 @@ server <- function(input, output, session) {
             group_by(User, ActivityType) %>% 
             summarise(odl = sum(Distance)/1000, czas = (sum(EndtimeStampInMS)-sum(StartingtimeStampInMS))/(1000*60*60)  ) %>% 
             filter(User == input$whichUser) %>% 
-            rename(category = input$kategoria) %>% 
-            mutate(ActivityType = fct_reorder(ActivityType, category, .desc = F)) 
+            rename(value = input$kategoria) %>% 
+            mutate(ActivityType = fct_reorder(ActivityType, value, .desc = F)) 
         
-        p <- ggplot(df, aes(x = ActivityType, y=category) ) +
+        p <- ggplot(df, aes(x = ActivityType, y=value) ) +
             geom_col( ) +
             theme_bw()+
             scale_x_discrete(breaks=df$ActivityType,
