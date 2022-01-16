@@ -200,8 +200,36 @@ server <- function(input, output, session) {
                      x = "")
         }
         
+       
         p
     })
+    output$liniowy <- plotly::renderPlotly({
+      
+      acti <- activitydf %>%
+        mutate(StartTime = as.POSIXct(StartingtimeStampInMS/1000, origin = "1970-01-01")) %>%
+        mutate(EndTime = as.POSIXct(EndtimeStampInMS/1000, origin = "1970-01-01")) %>%
+        mutate(data = as.Date(StartTime)) %>%
+        group_by(User, data) %>%
+        summarise(dystans = sum(Distance)/1000) %>%
+        mutate(cum_distance = cumsum(dystans))
+      
+      daty <- sort(unique(acti$data))
+      x <- data.frame(User = c("User3", "User3"), data = c(daty[1], daty[2]), dystans = c(0, 0), cum_distance = c(0,0))
+      
+      acti <- rbind(acti, x)
+      
+      acti %>%
+        ggplot(aes(x=data, y = cum_distance, color=User)) +
+        geom_line()+
+        labs(title = "Total distance travelled",
+             y = "Distance[km]",
+             x = "")+
+        theme_bw() +
+        scale_x_continuous(breaks= daty[seq(1, 29, by=4)])+
+        theme(axis.text.x = element_text(angle = 45))
+    }
+    )
+    
 }
 
 sidebar <- dashboardSidebar(
@@ -277,7 +305,12 @@ body <- dashboardBody(
                     box(
                         shinycssloaders::withSpinner(
                             plotly::plotlyOutput("TypAktywnosci")
-                        )
+                        )    
+                        ),
+                    box(
+                      shinycssloaders::withSpinner(
+                        plotly::plotlyOutput("liniowy")
+                    )
                     )
                 )
         )
