@@ -11,11 +11,11 @@ library(tm)
 library(shinydashboard)
 library(shinyWidgets)
 
-activitydf <- read.csv("ActivitySegmenttestData.csv")
+activitydf <- read.csv("data/dataCSV/ActivitySegmentalmostFinal.csv")
 
-pointsdf <- read.csv("PointstestData.csv")
+pointsdf <- read.csv("data/dataCSV/PointsalmostFinal.csv")
 
-placevisitdf <- read.csv("PlacesVisitedtestData.csv") 
+placevisitdf <- read.csv("data/dataCSV/PlacesVisitedalmostFinal.csv") 
 
 activity2 <- activitydf %>%  mutate(StartingHour = format(as.POSIXct(StartingtimeStampInMS / 1000, origin="1970-01-01",tz = "Europe/Warsaw"), "%H")) %>%
     mutate(StartingMinute = format(as.POSIXct(StartingtimeStampInMS / 1000, origin="1970-01-01",tz = "Europe/Warsaw"), "%M")) %>%
@@ -29,10 +29,10 @@ activity2 <- activitydf %>%  mutate(StartingHour = format(as.POSIXct(Startingtim
     mutate(Weekday=format(as.POSIXct((EndtimeStampInMS+StartingtimeStampInMS)/2000, origin="1970-01-01",tz = "Europe/Warsaw"), "%a")) %>% 
     mutate(dates = as.Date(as.POSIXct(StartingtimeStampInMS / 1000, origin="1970-01-01"))) 
 
-df2 <- read.csv("PlacesVisitedtestData.csv", encoding = "UTF-8")  %>% select(-PlaceId, -X)
+df2 <- read.csv("data/dataCSV/PlacesVisitedalmostFinal.csv", encoding = "UTF-8")  %>% select(-PlaceId, -X)
 
-df <- read.csv("PointstestData.csv", encoding = "UTF-8")
-dfa <- read.csv("ActivitySegmenttestData.csv", encoding = "UTF-8") %>% 
+df <- read.csv("data/dataCSV/PointsalmostFinal.csv", encoding = "UTF-8")
+dfa <- read.csv("data/dataCSV/ActivitySegmentalmostFinal.csv", encoding = "UTF-8") %>% 
     select(-X, -Distance) %>% 
     rename(startlong = StartingLongitude, startlat = StartingLatitude,
            endlong = EndingLongitude, endlat = EndingLatitude, 
