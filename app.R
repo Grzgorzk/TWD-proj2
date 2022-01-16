@@ -170,6 +170,41 @@ server <- function(input, output, session) {
         
     })
     
+    output$carbon <- plotly::renderPlotly({
+      df <- activitydf %>%
+        mutate(sladPoj = case_when(ActivityType ==  "WALKING" ~ 0   ,
+                                   ActivityType == "IN_PASSENGER_VEHICLE" ~ 96,
+                                   ActivityType =="IN_TRAM" ~ 35,
+                                   ActivityType =="IN_TRAIN" ~ 41,
+                                   ActivityType =="IN_BUS" ~52,
+                                   ActivityType =="IN_SUBWAY" ~ 31,
+                                   ActivityType =="UNKNOWN_ACTIVITY_TYPE" ~ 0,
+                                   TRUE ~ 0)
+        ) %>%
+        mutate(sladW = sladPoj*Distance/1000) %>% 
+        mutate(StartTime = as.POSIXct(StartingtimeStampInMS/1000, origin = "1970-01-01")) %>% 
+        mutate(EndTime = as.POSIXct(EndtimeStampInMS/1000, origin = "1970-01-01")) %>% 
+        filter(ActivityType != "WALKING" & ActivityType != "SKIING")
+      
+      
+      df %>% 
+        filter( StartTime > as.POSIXct(input$days[1]) & EndTime < as.POSIXct(input$days[2]+1)) %>% 
+        mutate(ActivityType = case_when(ActivityType == "IN_PASSENGER_VEHICLE" ~ "IN PASSENGER VEHICLE",
+                                        TRUE ~ "OTHER" ,
+        )) %>% 
+        group_by(User, ActivityType) %>%
+        summarise(CarbonFootprint = sum(sladW)/1000)  %>% 
+        mutate(ActivityType = fct_reorder(ActivityType, CarbonFootprint, .desc = FALSE)) %>% 
+        ggplot(aes(x = User,y = CarbonFootprint, fill = ActivityType)) +
+        geom_col() +
+        theme_bw() +
+        labs(title = "Estimated carbon footprint of our travels",
+             y = "Carbon footprint [kg]",
+             x = "")+
+        coord_flip()
+      
+      
+    })
 
     
     output$TypAktywnosci <- plotly::renderPlotly({
@@ -300,7 +335,21 @@ body <- dashboardBody(
                                      choiceValues = c("odl", "czas"),
                                      selected = "odl"
                         )
+                    ),
+                    box(
+                      dateRangeInput(
+                        inputId = "days",
+                        label = "Choose time:",
+                        start = daty[1],
+                        end = daty[length(daty)],
+                        min = daty[1],
+                        max = daty[length(daty)],
+                        format = "yyyy-mm-dd"
+                      )
+                      
                     )),
+                
+                  
                 fluidRow(
                     box(
                         shinycssloaders::withSpinner(
@@ -309,10 +358,16 @@ body <- dashboardBody(
                         ),
                     box(
                       shinycssloaders::withSpinner(
-                        plotly::plotlyOutput("liniowy")
+                        plotly::plotlyOutput("carbon")
+                      )
                     )
-                    )
-                )
+                ),
+                fluidRow(
+                  box(
+                    shinycssloaders::withSpinner(
+                      plotly::plotlyOutput("liniowy")
+                    )    
+                  ))
         )
         
     )
