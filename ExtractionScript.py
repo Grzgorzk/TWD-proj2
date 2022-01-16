@@ -8,6 +8,10 @@ import json
 import pandas as pd
 
 
+def sqdistance(X1, Y1, X2, Y2):
+    return (X1 - X2) ** 2 + (Y1 - Y2) ** 2
+
+
 def locationToLongLat(location):
     return location['longitudeE7'], location['latitudeE7']
 
@@ -18,6 +22,7 @@ def durationToTimeStampsMS(duration):
 
 def niceASDict(ActivitySegmentObj):
     t = {}
+
     t['StartingLongitude'], t['StartingLatitude'] = locationToLongLat(ActivitySegmentObj['startLocation'])
     t['EndingLongitude'], t['EndingLatitude'] = locationToLongLat(ActivitySegmentObj['endLocation'])
     t['StartingtimeStampInMS'], t['EndtimeStampInMS'] = durationToTimeStampsMS(ActivitySegmentObj['duration'])
@@ -40,14 +45,38 @@ def addNiceDictToBigNiceDict(bigDict, smallDict):
 
 def points(Object):
     returnDict = {key: [] for key in POINTS_KEYS}
-    try:
+    keys = Object.keys()
+    if 'simplifiedRawPath' in keys:
         for point in Object['simplifiedRawPath']['points']:
             returnDict['Longitude'].append(point['lngE7'])
             returnDict['Latitude'].append(point['latE7'])
             returnDict['TimeStampInMS'].append(point['timestampMs'])
             returnDict['User'].append(Object['User'])
-    except KeyError:  # niektore aktywnosci nie maja w ogole punktow
-        return {key: [] for key in POINTS_KEYS}
+    if 'waypointPath' in keys:
+        pointnum = len(Object['waypointPath']['waypoints'])
+        idx = .5
+        for point in Object['waypointPath']['waypoints']:
+            returnDict['Longitude'].append(point['lngE7'])
+            returnDict['Latitude'].append(point['latE7'])
+            returnDict['TimeStampInMS'].append((
+                int(Object['duration']['startTimestampMs']) * (pointnum - idx)
+                + int(Object['duration']['endTimestampMs']) * idx)/pointnum)
+            returnDict['User'].append(Object['User'])
+            idx+=1
+    if "startLocation" in keys:
+        returnDict['Longitude'].append(Object['startLocation']['longitudeE7'])
+        returnDict['Latitude'].append(Object['startLocation']['latitudeE7'])
+        returnDict['TimeStampInMS'].append(Object['duration']['startTimestampMs'])
+        returnDict['User'].append(Object['User'])
+        returnDict['Longitude'].append(Object['endLocation']['longitudeE7'])
+        returnDict['Latitude'].append(Object['endLocation']['latitudeE7'])
+        returnDict['TimeStampInMS'].append(Object['duration']['endTimestampMs'])
+        returnDict['User'].append(Object['User'])
+    else:
+        returnDict['Longitude'].append(Object['location']['longitudeE7'])
+        returnDict['Latitude'].append(Object['location']['latitudeE7'])
+        returnDict['TimeStampInMS'].append(Object['duration']['startTimestampMs'])
+        returnDict['User'].append(Object['User'])
     return returnDict
 
 
@@ -110,11 +139,14 @@ if __name__ == '__main__':
         for timelineObject in load['timelineObjects']:
             if 'activitySegment' in timelineObject.keys():
                 AS.append(timelineObject['activitySegment'])
-                AS[len(AS)-1]['User'] = User
+                AS[len(AS) - 1]['User'] = User
             else:
                 PV.append(timelineObject['placeVisit'])
                 PV[len(PV) - 1]['User'] = User
 
+    AS = [ASobj for ASobj in AS if ASobj['startLocation'] != {} and 'distance' in ASobj.keys()]
+    AS = [ASobj for ASobj in AS if int(ASobj['duration']['startTimestampMs']) >= 1639782000000]
+    PV = [PVobj for PVobj in PV if int(PVobj['duration']['startTimestampMs']) >= 1639782000000]
     PointsDict = {key: [] for key in POINTS_KEYS}
     ASDict = {key: [] for key in AS_KEYS}
     for ASObject in AS:
@@ -132,4 +164,3 @@ if __name__ == '__main__':
 
     Pointsdf = pd.DataFrame(PointsDict)
     Pointsdf.to_csv(targetloc + '/Points' + CharacteristicFileName + '.csv')
-
