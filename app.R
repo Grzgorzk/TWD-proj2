@@ -262,7 +262,7 @@ body <- dashboardBody(
                         selectInput(
                             inputId = "whichUser",
                             label = "Choose user:",
-                            choices = list("User1", "User2"),
+                            choices = list("User1", "User2", "User3"),
                             selected = "User1"
                         ),
                         
