@@ -10,6 +10,7 @@ library(stringi)
 library(tm)
 library(shinydashboard)
 library(shinyWidgets)
+library(plotly)
 
 activitydf <- read.csv("data/dataCSV/ActivitySegmentalmostFinal.csv")
 
@@ -91,25 +92,27 @@ df <- df %>% mutate(ActivityColor = case_when(
 
 server <- function(input, output, session) {
     
-    output$FirstGKPlot <- renderPlot({
+    output$FirstGKPlot <- renderPlotly({
         
         
         
         activity3<- activity2 %>% filter(User %in% input$Users)
-        activity2$Weekday <- factor(activity2$Weekday, c("Mon","Tue","Wed", "Thu", "Fri", "Sat", "Sun"))
+        activity3$Weekday <- factor(activity3$Weekday, c("Mon","Tue","Wed", "Thu", "Fri", "Sat", "Sun"))
         if(input$weekday=="day"){
-            ggplot(activity2, aes(y=Distance/1000, x=MiddleOfActivity, group=User, color=User, size=DurationInMinutes))+
+            p<-ggplot(activity3, aes(y=Distance/1000, x=MiddleOfActivity, group=User, color=User, size=DurationInMinutes))+
                 geom_point()+
                 ylab("Distance in km")+
                 xlab("Middle time of activity (hours)")+
                 ylim(0,40)}
         
         else{
-            ggplot(activity2, aes(y=Distance/1000, x=Weekday, group=User, color=User, size=DurationInMinutes))+
-                geom_point()+
+            p<-ggplot(activity3, aes(y=Distance/1000, x=Weekday, group=User, color=User, size=DurationInMinutes))+
+                geom_jitter(height = 0, width=0.3)+
                 ylab("Distance in km")+
-                xlab("weekday of activity")
+                xlab("weekday of activity")+
+                ylim(0,40)
         }
+        p
     })
     
     output$Mapka <- renderLeaflet({
@@ -240,13 +243,13 @@ body <- dashboardBody(
         tabItem(tabName = "grzegorzk",
                 fluidRow(
                     box(
-                        checkboxGroupInput("Users", "Users", c("User1", "User2"), c("User1","User2")),
+                        checkboxGroupInput("Users", "Users", c("User1", "User2", "User3"), c("User1","User2", "User3")),
                         radioButtons("weekday", "Do you want to see week perspective or day perspective?", c("week", "day"))
                     )
                 ),
                 fluidRow(
                     box(
-                        plotOutput("FirstGKPlot")
+                        plotlyOutput("FirstGKPlot")
                     ),
                     box(
                         plotOutput("SecondGKPlot")
