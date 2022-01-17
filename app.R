@@ -11,6 +11,7 @@ library(tm)
 library(shinydashboard)
 library(shinyWidgets)
 library(plotly)
+library(dashboardthemes)
 
 activitydf <- read.csv("data/dataCSV/ActivitySegmentalmostFinal.csv")
 
@@ -34,7 +35,7 @@ df2 <- read.csv("data/dataCSV/PlacesVisitedalmostFinal.csv", encoding = "UTF-8")
 
 df <- read.csv("data/dataCSV/PointsalmostFinal.csv", encoding = "UTF-8")
 dfa <- read.csv("data/dataCSV/ActivitySegmentalmostFinal.csv", encoding = "UTF-8") %>% 
-    select(-X, -Distance) %>% 
+    select(-X) %>% 
     rename(startlong = StartingLongitude, startlat = StartingLatitude,
            endlong = EndingLongitude, endlat = EndingLatitude, 
            starttime = StartingtimeStampInMS, endtime = EndtimeStampInMS)
@@ -109,8 +110,12 @@ server <- function(input, output, session) {
     
     
     output$distanceBox <- renderInfoBox({
+    totalDistance <- dfa %>% filter(User == input$users) %>%
+            filter(as.Date(as.POSIXct(starttime/1000, origin = "1970-01-01")) == input$DatesMerge) %>%
+            filter(ActivityType == "WALKING") %>% select(Distance)
+    totalDistance <- ifelse(length(totalDistance$Distance) > 0, round(sum(totalDistance$Distance)/0.65, 0), 0)  
         infoBox(
-            "Total distance", paste0(25 + input$count, "%"), icon = icon("road"),
+            "Step number:", totalDistance, icon = icon("shoe-prints"),
             color = "purple"
         )
     })
@@ -120,7 +125,7 @@ server <- function(input, output, session) {
         
         
         activity3<- activity2 %>% filter(User %in% input$Users) %>% 
-          filter(DurationInMinutes<=300)
+            filter(DurationInMinutes<=300)
         activity3$Weekday <- factor(activity3$Weekday, c("Mon","Tue","Wed", "Thu", "Fri", "Sat", "Sun"))
         if(input$weekday=="day"){
             p<-ggplot(activity3, aes(y=Distance/1000, x=MiddleOfActivity, group=User, color=User, size=sqrt(DurationInMinutes)/3))+
@@ -142,20 +147,20 @@ server <- function(input, output, session) {
     })
     
     output$SecondGKPlot<- renderPlot({
-      Users<-c('User1', 'User2', 'User3')
-      newdf<-data.frame(Users) 
-      newdf$PartyTime<-c(
-        sum(activity2 %>% filter((StartingHour<4)&(User=="User1")&(DurationInMinutes<300)) %>% select(DurationInMinutes)),
-        sum(activity2 %>% filter((StartingHour<4)&(User=="User2")&(DurationInMinutes<300)) %>% select(DurationInMinutes)),
-        sum(activity2 %>% filter((StartingHour<4)&(User=="User3")&(DurationInMinutes<300)) %>% select(DurationInMinutes))
-      )
-      
-      
-      p<- ggplot(newdf, aes(y=Users, x=PartyTime)) + geom_col(fill="darkblue")+coord_flip()
-      p
-      
-      
-      
+        Users<-c('User1', 'User2', 'User3')
+        newdf<-data.frame(Users) 
+        newdf$PartyTime<-c(
+            sum(activity2 %>% filter((StartingHour<4)&(User=="User1")&(DurationInMinutes<300)) %>% select(DurationInMinutes)),
+            sum(activity2 %>% filter((StartingHour<4)&(User=="User2")&(DurationInMinutes<300)) %>% select(DurationInMinutes)),
+            sum(activity2 %>% filter((StartingHour<4)&(User=="User3")&(DurationInMinutes<300)) %>% select(DurationInMinutes))
+        )
+        
+        
+        p<- ggplot(newdf, aes(y=Users, x=PartyTime)) + geom_col(fill="darkblue")+coord_flip()
+        p
+        
+        
+        
     })
     
     output$Mapka <- renderLeaflet({
@@ -313,6 +318,9 @@ sidebar <- dashboardSidebar(
 )
 
 body <- dashboardBody(
+    shinyDashboardThemes(
+        theme = "blue_gradient"
+    ),
     tabItems(
         tabItem(tabName = "mapka",
                 fluidRow(
@@ -337,7 +345,7 @@ body <- dashboardBody(
                     infoBox("New Orders1", 10 * 2, icon = icon("credit-card"), width = NULL)
                     ),
                     box(width = 8,
-                        leafletOutput("Mapka", height = 600)
+                        leafletOutput("Mapka", height = 620)
                     )
                     )
         ),
@@ -414,7 +422,7 @@ body <- dashboardBody(
 
 
 app_ui <- dashboardPage(
-    dashboardHeader(title = "Nasza aplikacja"),
+    dashboardHeader(title = "Our journey"),
     sidebar,
     body
 )
