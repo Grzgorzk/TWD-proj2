@@ -119,23 +119,43 @@ server <- function(input, output, session) {
         
         
         
-        activity3<- activity2 %>% filter(User %in% input$Users)
+        activity3<- activity2 %>% filter(User %in% input$Users) %>% 
+          filter(DurationInMinutes<=300)
         activity3$Weekday <- factor(activity3$Weekday, c("Mon","Tue","Wed", "Thu", "Fri", "Sat", "Sun"))
         if(input$weekday=="day"){
-            p<-ggplot(activity3, aes(y=Distance/1000, x=MiddleOfActivity, group=User, color=User, size=DurationInMinutes))+
+            p<-ggplot(activity3, aes(y=Distance/1000, x=MiddleOfActivity, group=User, color=User, size=sqrt(DurationInMinutes)/3))+
                 geom_point()+
-                ylab("Distance in km")+
+                ylab("Distance in km")+ 
+                scale_size_identity()+
                 xlab("Middle time of activity (hours)")+
                 ylim(0,40)}
         
         else{
-            p<-ggplot(activity3, aes(y=Distance/1000, x=Weekday, group=User, color=User, size=DurationInMinutes))+
-                geom_jitter(height = 0, width=0.3)+
+            p<-ggplot(activity3, aes(y=Distance/1000, x=Weekday, group=User, color=User, size=sqrt(DurationInMinutes)/3))+
+                geom_jitter(height = 0, width=0.3)+ 
+                scale_size_identity()+
                 ylab("Distance in km")+
                 xlab("weekday of activity")+
                 ylim(0,40)
         }
         p
+    })
+    
+    output$SecondGKPlot<- renderPlot({
+      Users<-c('User1', 'User2', 'User3')
+      newdf<-data.frame(Users) 
+      newdf$PartyTime<-c(
+        sum(activity2 %>% filter((StartingHour<4)&(User=="User1")&(DurationInMinutes<300)) %>% select(DurationInMinutes)),
+        sum(activity2 %>% filter((StartingHour<4)&(User=="User2")&(DurationInMinutes<300)) %>% select(DurationInMinutes)),
+        sum(activity2 %>% filter((StartingHour<4)&(User=="User3")&(DurationInMinutes<300)) %>% select(DurationInMinutes))
+      )
+      
+      
+      p<- ggplot(newdf, aes(y=Users, x=PartyTime)) + geom_col(fill="darkblue")+coord_flip()
+      p
+      
+      
+      
     })
     
     output$Mapka <- renderLeaflet({
