@@ -9,9 +9,26 @@ library(forcats)
 library(stringi)
 library(tm)
 library(shinydashboard)
+library(fresh)
 library(shinyWidgets)
 library(plotly)
 library(dashboardthemes)
+mytheme <- create_theme(
+  adminlte_color(
+    light_blue = "#728C69"
+  ),
+  adminlte_sidebar(
+    width = "200px",
+    dark_bg = "#D8DEE9",
+    dark_hover_bg = "#81A1C1",
+    dark_color = "#2E3440"
+  ),
+  adminlte_global(
+    content_bg = "#FFF",
+    box_bg = "#B2D3C2", 
+    info_box_bg = "#D8DEE9"
+  )
+)
 
 activitydf <- read.csv("data/dataCSV/ActivitySegmentalmostFinal.csv")
 
@@ -318,9 +335,13 @@ sidebar <- dashboardSidebar(
 )
 
 body <- dashboardBody(
-    shinyDashboardThemes(
-        theme = "blue_gradient"
-    ),
+  use_theme(mytheme), 
+  # tags$head(
+  #   tags$link(rel="stylesheet", type = "text/css", href = "x.css")
+  # ),
+    # shinyDashboardThemes(
+    #     theme = "poor_mans_flatly"
+    # ),
     tabItems(
         tabItem(tabName = "mapka",
                 fluidRow(
@@ -353,6 +374,7 @@ body <- dashboardBody(
         tabItem(tabName = "grzegorzk",
                 fluidRow(
                     box(
+                      
                         checkboxGroupInput("Users", "Users", c("User1", "User2", "User3"), c("User1","User2", "User3")),
                         radioButtons("weekday", "Do you want to see week perspective or day perspective?", c("week", "day"))
                     )
