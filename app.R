@@ -90,7 +90,8 @@ df <- df %>% mutate(ActivityColor = case_when(
     Activity == "IN_TRAIN" ~ "darkblue",
     Activity == "UNKNOWN_ACTIVITY_TYPE" ~ "grey",
     Activity == "IN_BUS" ~ "orange",
-    Activity == "IN_SUBWAY" ~ "black"
+    Activity == "IN_SUBWAY" ~ "black",
+    Activity == "SKIING" ~ "white"
 ))
 
 acti <- activitydf %>%
