@@ -16,7 +16,7 @@ activitydf <- read.csv("data/dataCSV/ActivitySegmentalmostFinal.csv")
 
 pointsdf <- read.csv("data/dataCSV/PointsalmostFinal.csv")
 
-placevisitdf <- read.csv("data/dataCSV/PlacesVisitedalmostFinal.csv") 
+placevisitdf <- read.csv("data/dataCSV/PlacesVisitedalmostFinal.csv", encoding = "UTF-8") 
 
 activity2 <- activitydf %>%  mutate(StartingHour = format(as.POSIXct(StartingtimeStampInMS / 1000, origin="1970-01-01",tz = "Europe/Warsaw"), "%H")) %>%
     mutate(StartingMinute = format(as.POSIXct(StartingtimeStampInMS / 1000, origin="1970-01-01",tz = "Europe/Warsaw"), "%M")) %>%
@@ -47,7 +47,9 @@ dfg2 <- dfa %>% select(endlong, endlat, endtime, User) %>%
 
 dfg <- rbind(dfg1, dfg2)
 
-df <- df %>% select(-X) %>% rbind(dfg) %>%
+#rbind(dfg) %>%
+
+df <- df %>% select(-X) %>%
     mutate(Activity = "UNKNOWN_ACTIVITY_TYPE", Place = NA) %>%
     mutate(long = Longitude / 1e7, lat = Latitude / 1e7, .keep = "unused") %>% 
     mutate(data = as.Date(as.POSIXct(TimeStampInMS / 1000, origin="1970-01-01"))) %>%
@@ -68,16 +70,18 @@ for (i in 1:nrow(dfa)){
     }
 }
 
+# for (i in 1:nrow(df2)){
+#     places <- which(df$TimeStampInMS >= df2[i,]$StartTimeStampInMS &
+#                         df$TimeStampInMS <= df2[i,]$EndTimeStampInMS &
+#                         df$User == df2[i,]$User)
+#     if(length(places) > 0){
+#         df[places,]$Place <- df2[i,]$Name
+#     }
+# }
 for (i in 1:nrow(df2)){
-    places <- which(df$TimeStampInMS >= df2[i,]$StartTimeStampInMS &
-                        df$TimeStampInMS <= df2[i,]$EndTimeStampInMS &
-                        df$User == df2[i,]$User)
-    if(length(places) > 0){
-        df[places,]$Place <- df2[i,]$Name
-    }
+    places <- which((df$lat == df2[i,]$Latitude / 1e7) & (df$long == df2[i,]$Longitude / 1e7))
+    df[places,]$Place <- df2[i,]$Name              
 }
-
-
 
 df <- df %>% mutate(ActivityColor = case_when(
     Activity == "WALKING" ~ "blue",
@@ -89,8 +93,26 @@ df <- df %>% mutate(ActivityColor = case_when(
     Activity == "IN_SUBWAY" ~ "black"
 ))
 
+acti <- activitydf %>%
+    mutate(StartTime = as.POSIXct(StartingtimeStampInMS/1000, origin = "1970-01-01")) %>%
+    mutate(EndTime = as.POSIXct(EndtimeStampInMS/1000, origin = "1970-01-01")) %>%
+    mutate(data = as.Date(StartTime)) %>%
+    group_by(User, data) %>%
+    summarise(dystans = sum(Distance)/1000) %>%
+    mutate(cum_distance = cumsum(dystans))
+
+daty <- sort(unique(acti$data))
+
 
 server <- function(input, output, session) {
+    
+    
+    output$distanceBox <- renderInfoBox({
+        infoBox(
+            "Total distance", paste0(25 + input$count, "%"), icon = icon("road"),
+            color = "purple"
+        )
+    })
     
     output$FirstGKPlot <- renderPlotly({
         
@@ -117,94 +139,98 @@ server <- function(input, output, session) {
     
     output$Mapka <- renderLeaflet({
         
-        df2 <- df %>% 
+        dfm <- df %>% 
             filter(User %in% input$users) %>%
             filter(data == input$DatesMerge &
                        hm > format(as.POSIXct(input$timeS), "%H:%M") &
                        hm < format(as.POSIXct(input$timeE), "%H:%M"))
         
-        map3 <- leaflet(df2) %>%
-            setView(lng = 21.017532, lat = 52.237049, zoom = 9) %>%
-            addAwesomeMarkers(~long,
-                              ~lat,
-                              icon = makeAwesomeIcon(
-                                  icon = ~if_else(is.na(Place), "diamond", "map-marker"),
-                                  library = "glyphicon",
-                                  markerColor = ~Color,
-                                  iconColor = "black"),
-                              popup = ~Place)
-        nn <- nrow(df2)-1
-        if (nn > 0){
-            for (i in 1:nn)
-                if (df2$User[i] == df2$User[i+1]){
-                    map3 <- map3 %>% 
-                        addPolylines(lat=c(df2[i,]$lat,df2[i+1,]$lat),
-                                     lng=c(df2[i,]$long,df2[i+1,]$long),
-                                     color = df2[i,]$ActivityColor,
-                                     popup = ~paste("Distance: ", round(raster::pointDistance(c(df2[i,]$long,
-                                                                                                df2[i,]$lat),
-                                                                                              c(df2[i+1,]$long,
-                                                                                                df2[i+1,]$lat),
-                                                                                              lonlat = TRUE), 0), "m"))
-                }
+    
+        if (length(dfm$User) == 0){
+            map3 <- leaflet(dfm) %>% setView(lng = 21.017532, lat = 52.237049, zoom = 7)
         }
+        else{
+            map3 <- leaflet(dfm) %>% addAwesomeMarkers(~long,
+                                  ~lat,
+                                  icon = makeAwesomeIcon(
+                                      icon = ~if_else(is.na(Place), "diamond", "map-marker"),
+                                      library = "glyphicon",
+                                      markerColor = ~Color,
+                                      iconColor = "black"),
+                                  popup = ~Place)
+            nn <- nrow(dfm)-1
+            if (nn > 0){
+                for (i in 1:nn)
+                    if (dfm$User[i] == dfm$User[i+1]){
+                        map3 <- map3 %>% 
+                            addPolylines(lat=c(dfm[i,]$lat,dfm[i+1,]$lat),
+                                         lng=c(dfm[i,]$long,dfm[i+1,]$long),
+                                         color = dfm[i,]$ActivityColor,
+                                         popup = ~paste("Distance: ", round(raster::pointDistance(c(dfm[i,]$long,
+                                                                                                    dfm[i,]$lat),
+                                                                                                  c(dfm[i+1,]$long,
+                                                                                                    dfm[i+1,]$lat),
+                                                                                                  lonlat = TRUE), 0), "m"))
+                    }
+            }
+            
+        }
+            map3 %>% addProviderTiles("OpenStreetMap.Mapnik", group = "Map View") %>%
+                addProviderTiles("Esri.WorldImagery", group = "Satellite View") %>%
+                addLayersControl(baseGroups = c("Map View", "Satellite View"),
+                                 options = layersControlOptions(collapsed = FALSE)) %>%
+                addLegend(
+                    position = "bottomright",
+                    colors = unique(df$ActivityColor),
+                    labels = tolower(
+                        stri_replace_all_regex(unique(df$Activity),
+                                               pattern = c("IN_|_TYPE", "_"),
+                                               replacement = c(""," "),
+                                               vectorize_all = FALSE)),
+                    opacity = 1,
+                    title = "Mode of transport"
+                    )
         
-        
-        map3 <- map3 %>% addProviderTiles("OpenStreetMap.Mapnik", group = "Map View") %>%
-            addProviderTiles("Esri.WorldImagery", group = "Satellite View")
-
-        map3 %>%
-            addLayersControl(baseGroups = c("Map View", "Satellite View"),
-                             options = layersControlOptions(collapsed = FALSE)) %>%
-            addLegend(
-                position = "bottomright",
-                colors = unique(df$ActivityColor),
-                labels = tolower(
-                    stri_replace_all_regex(unique(df$Activity),
-                                           pattern = c("IN_|_TYPE", "_"),
-                                           replacement = c(""," "),
-                                           vectorize_all = FALSE)),
-                opacity = 1,
-                title = "Mode of transport"
-                )
         
     })
     
+    
     output$carbon <- plotly::renderPlotly({
-      df <- activitydf %>%
-        mutate(sladPoj = case_when(ActivityType ==  "WALKING" ~ 0   ,
-                                   ActivityType == "IN_PASSENGER_VEHICLE" ~ 96,
-                                   ActivityType =="IN_TRAM" ~ 35,
-                                   ActivityType =="IN_TRAIN" ~ 41,
-                                   ActivityType =="IN_BUS" ~52,
-                                   ActivityType =="IN_SUBWAY" ~ 31,
-                                   ActivityType =="UNKNOWN_ACTIVITY_TYPE" ~ 0,
-                                   TRUE ~ 0)
-        ) %>%
-        mutate(sladW = sladPoj*Distance/1000) %>% 
-        mutate(StartTime = as.POSIXct(StartingtimeStampInMS/1000, origin = "1970-01-01")) %>% 
-        mutate(EndTime = as.POSIXct(EndtimeStampInMS/1000, origin = "1970-01-01")) %>% 
-        filter(ActivityType != "WALKING" & ActivityType != "SKIING")
-      
-      
-      df %>% 
-        filter( StartTime > as.POSIXct(input$days[1]) & EndTime < as.POSIXct(input$days[2]+1)) %>% 
-        mutate(ActivityType = case_when(ActivityType == "IN_PASSENGER_VEHICLE" ~ "IN PASSENGER VEHICLE",
-                                        TRUE ~ "OTHER" ,
-        )) %>% 
-        group_by(User, ActivityType) %>%
-        summarise(CarbonFootprint = sum(sladW)/1000)  %>% 
-        mutate(ActivityType = fct_reorder(ActivityType, CarbonFootprint, .desc = FALSE)) %>% 
-        ggplot(aes(x = User,y = CarbonFootprint, fill = ActivityType)) +
-        geom_col() +
-        theme_bw() +
-        labs(title = "Estimated carbon footprint of our travels",
-             y = "Carbon footprint [kg]",
-             x = "")+
-        coord_flip()
-      
-      
+        df <- activitydf %>%
+            mutate(sladPoj = case_when(ActivityType ==  "WALKING" ~ 0   ,
+                                       ActivityType == "IN_PASSENGER_VEHICLE" ~ 96,
+                                       ActivityType =="IN_TRAM" ~ 35,
+                                       ActivityType =="IN_TRAIN" ~ 41,
+                                       ActivityType =="IN_BUS" ~52,
+                                       ActivityType =="IN_SUBWAY" ~ 31,
+                                       ActivityType =="UNKNOWN_ACTIVITY_TYPE" ~ 0,
+                                       TRUE ~ 0)
+            ) %>%
+            mutate(sladW = sladPoj*Distance/1000) %>% 
+            mutate(StartTime = as.POSIXct(StartingtimeStampInMS/1000, origin = "1970-01-01")) %>% 
+            mutate(EndTime = as.POSIXct(EndtimeStampInMS/1000, origin = "1970-01-01")) %>% 
+            filter(ActivityType != "WALKING" & ActivityType != "SKIING")
+        
+        
+        df %>% 
+            filter( StartTime > as.POSIXct(input$days[1]) & EndTime < as.POSIXct(input$days[2]+1)) %>% 
+            mutate(ActivityType = case_when(ActivityType == "IN_PASSENGER_VEHICLE" ~ "IN PASSENGER VEHICLE",
+                                            TRUE ~ "OTHER" ,
+            )) %>% 
+            group_by(User, ActivityType) %>%
+            summarise(CarbonFootprint = sum(sladW)/1000)  %>% 
+            mutate(ActivityType = fct_reorder(ActivityType, CarbonFootprint, .desc = FALSE)) %>% 
+            ggplot(aes(x = User,y = CarbonFootprint, fill = ActivityType)) +
+            geom_col() +
+            theme_bw() +
+            labs(title = "Estimated carbon footprint of our travels",
+                 y = "Carbon footprint [kg]",
+                 x = "")+
+            coord_flip()
+        
+        
     })
+    
 
     
     output$TypAktywnosci <- plotly::renderPlotly({
@@ -235,36 +261,26 @@ server <- function(input, output, session) {
                      x = "")
         }
         
-       
         p
     })
+    
     output$liniowy <- plotly::renderPlotly({
-      
-      acti <- activitydf %>%
-        mutate(StartTime = as.POSIXct(StartingtimeStampInMS/1000, origin = "1970-01-01")) %>%
-        mutate(EndTime = as.POSIXct(EndtimeStampInMS/1000, origin = "1970-01-01")) %>%
-        mutate(data = as.Date(StartTime)) %>%
-        group_by(User, data) %>%
-        summarise(dystans = sum(Distance)/1000) %>%
-        mutate(cum_distance = cumsum(dystans))
-      
-      daty <- sort(unique(acti$data))
-      x <- data.frame(User = c("User3", "User3"), data = c(daty[1], daty[2]), dystans = c(0, 0), cum_distance = c(0,0))
-      
-      acti <- rbind(acti, x)
-      
-      acti %>%
-        ggplot(aes(x=data, y = cum_distance, color=User)) +
-        geom_line()+
-        labs(title = "Total distance travelled",
-             y = "Distance[km]",
-             x = "")+
-        theme_bw() +
-        scale_x_continuous(breaks= daty[seq(1, 29, by=4)])+
-        theme(axis.text.x = element_text(angle = 45))
+        
+        x <- data.frame(User = c("User3", "User3"), data = c(daty[1], daty[2]), dystans = c(0, 0), cum_distance = c(0,0))
+        
+        acti <- rbind(acti, x)
+        
+        acti %>%
+            ggplot(aes(x=data, y = cum_distance, color=User)) +
+            geom_line()+
+            labs(title = "Total distance travelled",
+                 y = "Distance[km]",
+                 x = "")+
+            theme_bw() +
+            scale_x_continuous(breaks= daty[seq(1, 29, by=4)])+
+            theme(axis.text.x = element_text(angle = 45))
     }
     )
-    
 }
 
 sidebar <- dashboardSidebar(
@@ -288,12 +304,14 @@ body <- dashboardBody(
                                   format="yyyy-mm-dd"),
                         timeInput("timeS", "Start time:", minute.steps = 5),
                         timeInput("timeE", "End time:", minute.steps = 5),
-                        checkboxGroupInput("users", 
-                                           "Users:", 
-                                           choices = unique(df$User),
-                                           selected = 1, inline = TRUE)
-                    ),
-                    infoBox("New Orders", 10 * 2, icon = icon("credit-card"), width = NULL),
+                    #     checkboxGroupInput("users", 
+                    #                        "Users:", 
+                    #                        choices = unique(df$User),
+                    #                        selected = 1, inline = TRUE)
+                    # ),
+                    selectInput("users", "User",
+                                choices = unique(df$User), selected = 1)),
+                    infoBoxOutput("distanceBox", width = NULL),
                     infoBox("New Orders1", 10 * 2, icon = icon("credit-card"), width = NULL),
                     infoBox("New Orders1", 10 * 2, icon = icon("credit-card"), width = NULL)
                     ),
@@ -337,37 +355,37 @@ body <- dashboardBody(
                         )
                     ),
                     box(
-                      dateRangeInput(
-                        inputId = "days",
-                        label = "Choose time:",
-                        start = daty[1],
-                        end = daty[length(daty)],
-                        min = daty[1],
-                        max = daty[length(daty)],
-                        format = "yyyy-mm-dd"
-                      )
-                      
+                        dateRangeInput(
+                            inputId = "days",
+                            label = "Choose time:",
+                            start = daty[1],
+                            end = daty[length(daty)],
+                            min = daty[1],
+                            max = daty[length(daty)],
+                            format = "yyyy-mm-dd"
+                        )
+                        
                     )),
                 
-                  
+                
                 fluidRow(
                     box(
                         shinycssloaders::withSpinner(
                             plotly::plotlyOutput("TypAktywnosci")
                         )    
-                        ),
+                    ),
                     box(
-                      shinycssloaders::withSpinner(
-                        plotly::plotlyOutput("carbon")
-                      )
+                        shinycssloaders::withSpinner(
+                            plotly::plotlyOutput("carbon")
+                        )
                     )
                 ),
                 fluidRow(
-                  box(
-                    shinycssloaders::withSpinner(
-                      plotly::plotlyOutput("liniowy")
-                    )    
-                  ))
+                    box(
+                        shinycssloaders::withSpinner(
+                            plotly::plotlyOutput("liniowy")
+                        )    
+                    ))
         )
         
     )
