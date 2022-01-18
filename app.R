@@ -211,7 +211,7 @@ server <- function(input, output, session) {
                 xlab("weekday of activity")+
                 ylim(0,40)
         }
-        p
+        ggplotly(p) %>% config(displayModeBar = F)
     })
     
     output$SecondGKPlot<- renderPlot({
@@ -306,7 +306,7 @@ server <- function(input, output, session) {
             filter(ActivityType != "WALKING" & ActivityType != "SKIING")
         
         
-        df %>% 
+        p <- df %>% 
             filter( StartTime > as.POSIXct(input$days[1]) & EndTime < as.POSIXct(input$days[2]+1)) %>% 
             mutate(ActivityType = case_when(ActivityType == "IN_PASSENGER_VEHICLE" ~ "IN PASSENGER VEHICLE",
                                             TRUE ~ "OTHER" ,
@@ -321,6 +321,8 @@ server <- function(input, output, session) {
                  y = "Carbon footprint [kg]",
                  x = "")+
             coord_flip()
+        
+        ggplotly(p) %>% config(displayModeBar = F)
         
         
     })
@@ -355,7 +357,7 @@ server <- function(input, output, session) {
                      x = "")
         }
         
-        p
+        ggplotly(p) %>% config(displayModeBar = F)
     })
     
     output$liniowy <- plotly::renderPlotly({
@@ -364,7 +366,7 @@ server <- function(input, output, session) {
         
         acti <- rbind(acti, x)
         
-        acti %>%
+        p <- acti %>%
             ggplot(aes(x=data, y = cum_distance, color=User)) +
             geom_line()+
             labs(title = "Total distance travelled",
@@ -373,6 +375,7 @@ server <- function(input, output, session) {
             theme_bw() +
             scale_x_continuous(breaks= daty[seq(1, 29, by=4)])+
             theme(axis.text.x = element_text(angle = 45))
+        ggplotly(p) %>% config(displayModeBar = F)
     }
     )
 }
