@@ -13,20 +13,53 @@ library(fresh)
 library(shinyWidgets)
 library(plotly)
 library(dashboardthemes)
+
+# mytheme <- create_theme(
+#   adminlte_color(
+#     light_blue = "#728C69"
+#   ),
+#   adminlte_sidebar(
+#     width = "200px",
+#     dark_bg = "#728C69",
+#     dark_hover_bg = "#B2D3C2",
+#     dark_color = "#2C1112"
+#   ),
+#   adminlte_global(
+#     content_bg = "#fbf8f3",
+#     box_bg = 	"#dcc59c",
+#     info_box_bg = "#dcc59c"
+#   )
+# )
+# mytheme <- create_theme(
+#   adminlte_color(
+#     light_blue = "#08303A"
+#   ),
+#   adminlte_sidebar(
+#     width = "200px",
+#     dark_bg = "#08303A",
+#     dark_hover_bg = "#e74c3c",
+#     dark_color = "#437483"
+#   ),
+#   adminlte_global(
+#     content_bg = "#F8FEFE",
+#     box_bg = 	"#7BA9B6",
+#     info_box_bg = "#7BA9B6"
+#   )
+# )
 mytheme <- create_theme(
   adminlte_color(
-    light_blue = "#728C69"
+    light_blue = "#3D210C"
   ),
   adminlte_sidebar(
     width = "200px",
-    dark_bg = "#D8DEE9",
-    dark_hover_bg = "#81A1C1",
-    dark_color = "#2E3440"
+    dark_bg = "#3D210C",
+    dark_hover_bg = "#e74c3c",
+    dark_color = "#437483"
   ),
   adminlte_global(
-    content_bg = "#FFF",
-    box_bg = "#B2D3C2", 
-    info_box_bg = "#D8DEE9"
+    content_bg = "#F2E5A5",
+    box_bg = 	"#B1B583",
+    info_box_bg = "#B1B583"
   )
 )
 
@@ -72,10 +105,7 @@ df <- df %>% select(-X) %>%
     mutate(long = Longitude / 1e7, lat = Latitude / 1e7, .keep = "unused") %>% 
     mutate(data = as.Date(as.POSIXct(TimeStampInMS / 1000, origin="1970-01-01"))) %>%
     mutate(hm = format(as.POSIXct(TimeStampInMS / 1000, origin="1970-01-01"), "%H:%M")) %>%
-    mutate(Color = case_when(
-        User == "User1" ~ "red",
-        User == "User2" ~ "purple"
-    )) %>% arrange(User, TimeStampInMS)
+    arrange(User, TimeStampInMS)
 
 
 for (i in 1:nrow(dfa)){
@@ -88,14 +118,7 @@ for (i in 1:nrow(dfa)){
     }
 }
 
-# for (i in 1:nrow(df2)){
-#     places <- which(df$TimeStampInMS >= df2[i,]$StartTimeStampInMS &
-#                         df$TimeStampInMS <= df2[i,]$EndTimeStampInMS &
-#                         df$User == df2[i,]$User)
-#     if(length(places) > 0){
-#         df[places,]$Place <- df2[i,]$Name
-#     }
-# }
+
 for (i in 1:nrow(df2)){
     places <- which((df$lat == df2[i,]$Latitude / 1e7) & (df$long == df2[i,]$Longitude / 1e7))
     df[places,]$Place <- df2[i,]$Name              
@@ -126,15 +149,43 @@ daty <- sort(unique(acti$data))
 server <- function(input, output, session) {
     
     
-    output$distanceBox <- renderInfoBox({
-    totalDistance <- dfa %>% filter(User == input$users) %>%
+    output$stepBox <- renderInfoBox({
+    stepCount <- dfa %>% filter(User == input$users) %>%
             filter(as.Date(as.POSIXct(starttime/1000, origin = "1970-01-01")) == input$DatesMerge) %>%
             filter(ActivityType == "WALKING") %>% select(Distance)
-    totalDistance <- ifelse(length(totalDistance$Distance) > 0, round(sum(totalDistance$Distance)/0.65, 0), 0)  
+    stepCount <- ifelse(length(stepCount$Distance) > 0, round(sum(stepCount$Distance)/0.65, 0), 0)  
         infoBox(
-            "Step number:", totalDistance, icon = icon("shoe-prints"),
-            color = "purple"
+            "Steps number:", stepCount, icon = icon("shoe-prints"),
+            color = "red"
         )
+    })
+    
+    output$distanceBox <- renderInfoBox({
+      totalDistance <- dfa %>% filter(User == input$users) %>%
+        filter(as.Date(as.POSIXct(starttime/1000, origin = "1970-01-01")) == input$DatesMerge) %>%
+        select(Distance)
+      totalDistance <- ifelse(length(totalDistance$Distance) > 0, round(sum(totalDistance$Distance)/1000, 1), 0)  
+      infoBox(
+        "Total distance:", paste(totalDistance, "km"), icon = icon("road"),
+        color = "red"
+      )
+    })
+    
+    output$transportBox <- renderInfoBox({
+      transport <- dfa %>% filter(User == input$users) %>%
+        filter(as.Date(as.POSIXct(starttime/1000, origin = "1970-01-01")) == input$DatesMerge) %>%
+        mutate(time = endtime - starttime) %>%
+        group_by(ActivityType) %>% summarise(sum = sum(time)) %>% arrange(desc(sum)) %>% slice(1)
+      transport <- ifelse(length(transport$sum) > 0,
+                          stri_replace_all_regex(transport$ActivityType,
+                                                 pattern = c("IN_|_TYPE", "_"),
+                                                 replacement = c(""," "),
+                                                 vectorize_all = FALSE),
+                          "NWM") 
+      infoBox(
+        "Main transport:", transport, icon = icon("bus"),
+        color = "red"
+      )
     })
     
     output$FirstGKPlot <- renderPlotly({
@@ -198,7 +249,7 @@ server <- function(input, output, session) {
                                   icon = makeAwesomeIcon(
                                       icon = ~if_else(is.na(Place), "diamond", "map-marker"),
                                       library = "glyphicon",
-                                      markerColor = ~Color,
+                                      markerColor = "red",
                                       iconColor = "black"),
                                   popup = ~Place)
             nn <- nrow(dfm)-1
@@ -335,17 +386,13 @@ sidebar <- dashboardSidebar(
 )
 
 body <- dashboardBody(
+  
   use_theme(mytheme), 
-  # tags$head(
-  #   tags$link(rel="stylesheet", type = "text/css", href = "x.css")
-  # ),
-    # shinyDashboardThemes(
-    #     theme = "poor_mans_flatly"
-    # ),
+
     tabItems(
         tabItem(tabName = "mapka",
                 fluidRow(
-                    column(width = 3, box(width = NULL,
+                    column(width = 3, box(status = "danger", width = NULL,
                         dateInput("DatesMerge",
                                   "Choose date:",
                                   min = min(df$data),
@@ -354,18 +401,13 @@ body <- dashboardBody(
                                   format="yyyy-mm-dd"),
                         timeInput("timeS", "Start time:", minute.steps = 5),
                         timeInput("timeE", "End time:", minute.steps = 5),
-                    #     checkboxGroupInput("users", 
-                    #                        "Users:", 
-                    #                        choices = unique(df$User),
-                    #                        selected = 1, inline = TRUE)
-                    # ),
-                    selectInput("users", "User",
+                        selectInput("users", "User",
                                 choices = unique(df$User), selected = 1)),
                     infoBoxOutput("distanceBox", width = NULL),
-                    infoBox("New Orders1", 10 * 2, icon = icon("credit-card"), width = NULL),
-                    infoBox("New Orders1", 10 * 2, icon = icon("credit-card"), width = NULL)
+                    infoBoxOutput("transportBox", width = NULL),
+                    infoBoxOutput("stepBox", width = NULL)
                     ),
-                    box(width = 8,
+                    box(width = 8, status = "danger",
                         leafletOutput("Mapka", height = 620)
                     )
                     )
@@ -373,17 +415,17 @@ body <- dashboardBody(
         
         tabItem(tabName = "grzegorzk",
                 fluidRow(
-                    box(
+                    box(status = "danger",
                       
                         checkboxGroupInput("Users", "Users", c("User1", "User2", "User3"), c("User1","User2", "User3")),
                         radioButtons("weekday", "Do you want to see week perspective or day perspective?", c("week", "day"))
                     )
                 ),
                 fluidRow(
-                    box(
+                    box(status = "danger",
                         plotlyOutput("FirstGKPlot")
                     ),
-                    box(
+                    box(status = "danger",
                         plotOutput("SecondGKPlot")
                     )
                 )
