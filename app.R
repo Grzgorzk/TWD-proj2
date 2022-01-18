@@ -57,9 +57,9 @@ mytheme <- create_theme(
     dark_color = "#437483"
   ),
   adminlte_global(
-    content_bg = "#F2E5A5",
-    box_bg = 	"#B1B583",
-    info_box_bg = "#B1B583"
+    content_bg = "#fff",
+    box_bg = 	"#F2E5A5",
+    info_box_bg = "#F2E5A5"
   )
 )
 
