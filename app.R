@@ -10,9 +10,7 @@ library(stringi)
 library(tm)
 library(shinydashboard)
 library(fresh)
-library(shinyWidgets)
 library(plotly)
-library(dashboardthemes)
 
 # mytheme <- create_theme(
 #   adminlte_color(
@@ -54,7 +52,7 @@ mytheme <- create_theme(
     width = "200px",
     dark_bg = "#3D210C",
     dark_hover_bg = "#e74c3c",
-    dark_color = "#437483"
+    dark_color = "#F2E5A5"
   ),
   adminlte_global(
     content_bg = "#fff",
@@ -63,9 +61,9 @@ mytheme <- create_theme(
   )
 )
 
-activitydf <- read.csv("data/dataCSV/ActivitySegmentalmostFinal.csv")
+activitydf <- read.csv("data/dataCSV/ActivitySegmentalmostFinal.csv", encoding = "UTF-8")
 
-pointsdf <- read.csv("data/dataCSV/PointsalmostFinal.csv")
+pointsdf <- read.csv("data/dataCSV/PointsalmostFinal.csv", encoding = "UTF-8")
 
 placevisitdf <- read.csv("data/dataCSV/PlacesVisitedalmostFinal.csv", encoding = "UTF-8") 
 
@@ -81,26 +79,17 @@ activity2 <- activitydf %>%  mutate(StartingHour = format(as.POSIXct(Startingtim
     mutate(Weekday=format(as.POSIXct((EndtimeStampInMS+StartingtimeStampInMS)/2000, origin="1970-01-01",tz = "Europe/Warsaw"), "%a")) %>% 
     mutate(dates = as.Date(as.POSIXct(StartingtimeStampInMS / 1000, origin="1970-01-01"))) 
 
-df2 <- read.csv("data/dataCSV/PlacesVisitedalmostFinal.csv", encoding = "UTF-8")  %>% select(-PlaceId, -X)
+df2 <- placevisitdf  %>% select(-PlaceId, -X)
 
-df <- read.csv("data/dataCSV/PointsalmostFinal.csv", encoding = "UTF-8")
-dfa <- read.csv("data/dataCSV/ActivitySegmentalmostFinal.csv", encoding = "UTF-8") %>% 
+
+dfa <- activitydf %>% 
     select(-X) %>% 
     rename(startlong = StartingLongitude, startlat = StartingLatitude,
            endlong = EndingLongitude, endlat = EndingLatitude, 
            starttime = StartingtimeStampInMS, endtime = EndtimeStampInMS)
 
-dfg1 <- dfa %>% select(startlong, startlat, starttime, User) %>%
-    rename(Longitude = startlong, Latitude = startlat, TimeStampInMS = starttime)
 
-dfg2 <- dfa %>% select(endlong, endlat, endtime, User) %>%
-    rename(Longitude = endlong, Latitude = endlat, TimeStampInMS = endtime)
-
-dfg <- rbind(dfg1, dfg2)
-
-#rbind(dfg) %>%
-
-df <- df %>% select(-X) %>%
+df <- pointsdf %>% select(-X) %>%
     mutate(Activity = "UNKNOWN_ACTIVITY_TYPE", Place = NA) %>%
     mutate(long = Longitude / 1e7, lat = Latitude / 1e7, .keep = "unused") %>% 
     mutate(data = as.Date(as.POSIXct(TimeStampInMS / 1000, origin="1970-01-01"))) %>%
@@ -128,10 +117,10 @@ df <- df %>% mutate(ActivityColor = case_when(
     Activity == "WALKING" ~ "blue",
     Activity == "IN_PASSENGER_VEHICLE" ~ "purple",
     Activity == "IN_TRAM" ~ "yellow",
-    Activity == "IN_TRAIN" ~ "darkblue",
+    Activity == "IN_TRAIN" ~ "navy",
     Activity == "UNKNOWN_ACTIVITY_TYPE" ~ "grey",
     Activity == "IN_BUS" ~ "orange",
-    Activity == "IN_SUBWAY" ~ "black",
+    Activity == "IN_SUBWAY" ~ "maroon",
     Activity == "SKIING" ~ "white"
 ))
 
@@ -400,10 +389,10 @@ body <- dashboardBody(
                                   "Choose date:",
                                   min = min(df$data),
                                   max = max(df$data),
-                                  value = median(df$data),
+                                  value = as.Date("2022-01-14"),
                                   format="yyyy-mm-dd"),
-                        timeInput("timeS", "Start time:", minute.steps = 5),
-                        timeInput("timeE", "End time:", minute.steps = 5),
+                        timeInput("timeS", "Start time:", minute.steps = 5, value = strptime("11:00:00", "%T")),
+                        timeInput("timeE", "End time:", minute.steps = 5, value = strptime("21:00:00", "%T")),
                         selectInput("users", "User",
                                 choices = unique(df$User), selected = 1)),
                     infoBoxOutput("distanceBox", width = NULL),
@@ -411,7 +400,9 @@ body <- dashboardBody(
                     infoBoxOutput("stepBox", width = NULL)
                     ),
                     box(width = 8, status = "danger",
-                        leafletOutput("Mapka", height = 620)
+                        shinycssloaders::withSpinner(
+                          leafletOutput("Mapka", height = 620)
+                        )
                     )
                     )
         ),
@@ -435,7 +426,7 @@ body <- dashboardBody(
         ),
         tabItem(tabName = "marcelw",
                 fluidRow(
-                    box(
+                    box(status = "danger",
                         selectInput(
                             inputId = "whichUser",
                             label = "Choose user:",
@@ -450,7 +441,7 @@ body <- dashboardBody(
                                      selected = "odl"
                         )
                     ),
-                    box(
+                    box(status = "danger",
                         dateRangeInput(
                             inputId = "days",
                             label = "Choose time:",
@@ -465,19 +456,19 @@ body <- dashboardBody(
                 
                 
                 fluidRow(
-                    box(
+                    box(status = "danger",
                         shinycssloaders::withSpinner(
                             plotly::plotlyOutput("TypAktywnosci")
                         )    
                     ),
-                    box(
+                    box(status = "danger",
                         shinycssloaders::withSpinner(
                             plotly::plotlyOutput("carbon")
                         )
                     )
                 ),
                 fluidRow(
-                    box(
+                    box(status = "danger",
                         shinycssloaders::withSpinner(
                             plotly::plotlyOutput("liniowy")
                         )    
