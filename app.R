@@ -411,9 +411,9 @@ server <- function(input, output, session) {
 
 sidebar <- dashboardSidebar(
     sidebarMenu(
-        menuItem("Mapka", tabName = "mapka", icon = icon("map")),
-        menuItem("GrzegorzK", tabName = "grzegorzk", icon = icon("running")),
-        menuItem("MarcelW", tabName = "marcelw", icon = icon("road"))
+        menuItem("Map", tabName = "mapka", icon = icon("map")),
+        menuItem("How much did we travel?", tabName = "grzegorzk", icon = icon("running")),
+        menuItem("How did we travel?", tabName = "marcelw", icon = icon("road"))
     )
 )
 
@@ -461,11 +461,19 @@ body <- dashboardBody(
                         tags$h4(tags$b("The graph shows Party index, which is calculated as the time spent active between 0 AM and 4 AM.")),
                         plotOutput("SecondGKPlot")
                     )
+                ),
+                fluidRow(
+                    box(status = "danger", width =10,
+                        shinycssloaders::withSpinner(
+                          plotly::plotlyOutput("liniowy"))
+                        
+                    ),
                 )
+                
         ),
         tabItem(tabName = "marcelw",
                 fluidRow(
-                    box(status = "danger",
+                    column(width = 5,status = "danger",
                         selectInput(
                             inputId = "whichUser",
                             label = "Select user:",
@@ -485,12 +493,14 @@ body <- dashboardBody(
                                                           "Normal classes" = "PW",
                                                           "Online classes" = "ZDALNIE"),
                                            selected = "PW",
-                        )
-                                          
+                        ),
+                        shinycssloaders::withSpinner(
+                          plotly::plotlyOutput("TypAktywnosci")
+                        )                  
                         
                          
                     ),
-                    box(status = "danger",
+                    column(width = 5, status = "danger",
                         
                         dateRangeInput(
                             inputId = "days",
@@ -500,39 +510,42 @@ body <- dashboardBody(
                             min = daty[1],
                             max = daty[length(daty)],
                             format = "yyyy-mm-dd"
-                        )
-                        
-                    )
-                ),
-                
-                
-                fluidRow(
-                    box(status = "danger",
+                        ),
                         shinycssloaders::withSpinner(
-                            plotly::plotlyOutput("TypAktywnosci")
-                        )    
-                    ),
-                    box(status = "danger",
-                        shinycssloaders::withSpinner(
-                            plotly::plotlyOutput("carbon")),
+                          plotly::plotlyOutput("carbon")),
                         h5("Estimated carbon footprint is calculated on the grounds of the data about 2018 year in UK. They
                         include carbon dioxide, but also other greenhouse gases.
 We assumed that
  every car journey was in medium petrol car with 3 people inside;
  and average number of passengers in bus was 17." ),
                         h5("Source: https://ourworldindata.org/grapher/carbon-footprint-travel-mode")
-                        )
-                    ),
+                    )
+                ),
                 
-                fluidRow(
-                    box(status = "danger",
-                        shinycssloaders::withSpinner(
-                            plotly::plotlyOutput("liniowy"))
-                        
-                    ),
+#                 
+#                 fluidRow(
+#                     box(status = "danger",
+#                         shinycssloaders::withSpinner(
+#                             plotly::plotlyOutput("TypAktywnosci")
+#                         )    
+#                     ),
+#                     box(status = "danger",
+#                         shinycssloaders::withSpinner(
+#                             plotly::plotlyOutput("carbon")),
+#                         h5("Estimated carbon footprint is calculated on the grounds of the data about 2018 year in UK. They
+#                         include carbon dioxide, but also other greenhouse gases.
+# We assumed that
+#  every car journey was in medium petrol car with 3 people inside;
+#  and average number of passengers in bus was 17." ),
+#                         h5("Source: https://ourworldindata.org/grapher/carbon-footprint-travel-mode")
+#                         )
+#                     )
+#                 
+                
+                    
                     
                         
-                    )
+                   
         )
         
     )
