@@ -61,7 +61,7 @@ mytheme <- create_theme(
   )
 )
 
-pal <- c("#F28500", "#e74c3c", "#3D210C")
+
 
 activitydf <- read.csv("data/dataCSV/ActivitySegmentalmostFinal.csv", encoding = "UTF-8") %>% 
   mutate(ActivityType = ifelse(ActivityType == "IN_PASSENGER_VEHICLE", "IN_CAR", ActivityType))
@@ -318,14 +318,14 @@ server <- function(input, output, session) {
             mutate(ActivityType = fct_reorder(ActivityType, CarbonFootprint, .desc = F)) %>% 
             ggplot(aes(x = User,y = CarbonFootprint, fill = ActivityType)) +
             geom_col() +
+          scale_fill_brewer(palette = "Dark2")+
             theme_bw() +
             labs(title = "Estimated carbon footprint of our travels",
                  y = "Carbon footprint [kg]",
                  x = "")+
           theme(plot.background = element_rect(fill = "#F2E5A5", color = "#F2E5A5"))+
           theme(legend.background = element_rect(fill = "#F2E5A5", color = "#F2E5A5"))+
-          coord_flip()+
-          scale_fill_manual(values = pal[2:3])
+          coord_flip()
         
         ggplotly(p) %>% config(displayModeBar = F)
         
@@ -344,6 +344,7 @@ server <- function(input, output, session) {
                                   StartTime >   as.POSIXct(as.Date("2022-01-10")) & StartTime <   as.POSIXct(as.Date("2022-01-15")) ~ "PW"  ,
                                   StartTime >   as.POSIXct(as.Date("2021-12-20")) & StartTime <   as.POSIXct(as.Date("2021-12-23"))  ~ "ZDALNIE",
                                   StartTime >   as.POSIXct(as.Date("2022-01-03")) & StartTime <   as.POSIXct(as.Date("2022-01-06"))  ~ "ZDALNIE",
+                                  StartTime >   as.POSIXct(as.Date("2022-01-17"))  ~ "PW",
                                   TRUE ~ "WEEKEND"
             )
           ) %>% 
@@ -473,34 +474,38 @@ body <- dashboardBody(
         ),
         tabItem(tabName = "marcelw",
                 fluidRow(
-                    column(width = 5,status = "danger",
+                    box(width =5,status = "danger",
                         selectInput(
                             inputId = "whichUser",
                             label = "Select user:",
                             choices = list("User1", "User2", "User3"),
                             selected = "User1"
                         ),
-                        
+                        column(width = 6,
                         radioButtons("kategoria", 
                                      "Select parameter:",
                                      choiceNames = c("Distance", "Time"),
                                      choiceValues = c("odl", "czas"),
                                      selected = "odl"
+                        )
                         ),
+                        column(width = 6,
                         checkboxGroupInput("period", 
                                            "Select period:",
                                            choices = list("Weekends and holidays" ="WEEKEND", 
                                                           "Normal classes" = "PW",
                                                           "Online classes" = "ZDALNIE"),
                                            selected = "PW",
+                        )
                         ),
+                        column(width =12,
                         shinycssloaders::withSpinner(
                           plotly::plotlyOutput("TypAktywnosci")
                         )                  
-                        
+                        )
                          
                     ),
-                    column(width = 5, status = "danger",
+                    box(width = 5, status = "danger",
                         
                         dateRangeInput(
                             inputId = "days",
