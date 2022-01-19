@@ -61,7 +61,8 @@ mytheme <- create_theme(
   )
 )
 
-activitydf <- read.csv("data/dataCSV/ActivitySegmentalmostFinal.csv", encoding = "UTF-8")
+activitydf <- read.csv("data/dataCSV/ActivitySegmentalmostFinal.csv", encoding = "UTF-8") %>% 
+  mutate(ActivityType = ifelse(ActivityType == "IN_PASSENGER_VEHICLE", "IN_CAR", ActivityType))
 
 pointsdf <- read.csv("data/dataCSV/PointsalmostFinal.csv", encoding = "UTF-8")
 
@@ -115,7 +116,7 @@ for (i in 1:nrow(df2)){
 
 df <- df %>% mutate(ActivityColor = case_when(
     Activity == "WALKING" ~ "blue",
-    Activity == "IN_PASSENGER_VEHICLE" ~ "purple",
+    Activity == "IN_CAR" ~ "purple",
     Activity == "IN_TRAM" ~ "yellow",
     Activity == "IN_TRAIN" ~ "navy",
     Activity == "UNKNOWN_ACTIVITY_TYPE" ~ "grey",
@@ -281,7 +282,7 @@ server <- function(input, output, session) {
     output$carbon <- plotly::renderPlotly({
         df <- activitydf %>%
             mutate(sladPoj = case_when(ActivityType ==  "WALKING" ~ 0   ,
-                                       ActivityType == "IN_PASSENGER_VEHICLE" ~ 96,
+                                       ActivityType == "IN_CAR" ~ 96,
                                        ActivityType =="IN_TRAM" ~ 35,
                                        ActivityType =="IN_TRAIN" ~ 41,
                                        ActivityType =="IN_BUS" ~52,
@@ -297,7 +298,7 @@ server <- function(input, output, session) {
         
         p <- df %>% 
             filter( StartTime > as.POSIXct(input$days[1]) & EndTime < as.POSIXct(input$days[2]+1)) %>% 
-            mutate(ActivityType = case_when(ActivityType == "IN_PASSENGER_VEHICLE" ~ "IN PASSENGER VEHICLE",
+            mutate(ActivityType = case_when(ActivityType == "IN_CAR" ~ "IN CAR",
                                             TRUE ~ "OTHER" ,
             )) %>% 
             group_by(User, ActivityType) %>%
@@ -386,7 +387,8 @@ server <- function(input, output, session) {
             theme_bw() +
             scale_x_continuous(breaks= daty[seq(1, 29, by=4)])+
             theme(axis.text.x = element_text(angle = 45))+
-          theme(plot.background = element_rect(fill = "#F2E5A5", color = "#F2E5A5"))
+          theme(plot.background = element_rect(fill = "#F2E5A5", color = "#F2E5A5"))+
+          theme(legend.background = element_rect(fill = "#F2E5A5", color = "#F2E5A5"))
         
         ggplotly(p) %>% config(displayModeBar = F)
     }
@@ -499,16 +501,25 @@ body <- dashboardBody(
                     ),
                     box(status = "danger",
                         shinycssloaders::withSpinner(
-                            plotly::plotlyOutput("carbon")
+                            plotly::plotlyOutput("carbon")),
+                        h5("Estimated carbon footprint is calculated on the grounds of the data about 2018 year in UK. They
+                        include carbon dioxide, but also other greenhouse gases.
+We assumed that
+ every car journey was in medium petrol car with 3 people inside;
+ and average number of passengers in bus was 17." ),
+                        h5("Source: https://ourworldindata.org/grapher/carbon-footprint-travel-mode")
                         )
-                    )
-                ),
+                    ),
+                
                 fluidRow(
                     box(status = "danger",
                         shinycssloaders::withSpinner(
-                            plotly::plotlyOutput("liniowy")
-                        )    
-                    ))
+                            plotly::plotlyOutput("liniowy"))
+                        
+                    ),
+                    
+                        
+                    )
         )
         
     )
