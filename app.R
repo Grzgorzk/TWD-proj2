@@ -184,24 +184,30 @@ server <- function(input, output, session) {
         
         
         
-        activity3<- activity2 %>% filter(User %in% input$Users) %>% 
+        activity3<- activity2  %>% 
             filter(DurationInMinutes<=300)
         activity3$Weekday <- factor(activity3$Weekday, c("Mon","Tue","Wed", "Thu", "Fri", "Sat", "Sun"))
         if(input$weekday=="day"){
             p<-ggplot(activity3, aes(y=Distance/1000, x=MiddleOfActivity, group=User, color=User, size=sqrt(DurationInMinutes)/3))+
+                scale_color_brewer(palette = "Dark2")+
                 geom_point()+
                 ylab("Distance in km")+ 
                 scale_size_identity()+
                 xlab("Middle time of activity (hours)")+
-                ylim(0,40)}
+                ylim(0,input$MaxDistance)+
+                theme(plot.background = element_rect(fill = "#F2E5A5", color = "#F2E5A5"))+
+                theme(legend.background = element_rect(fill = "#F2E5A5", color = "#F2E5A5"))}
         
         else{
             p<-ggplot(activity3, aes(y=Distance/1000, x=Weekday, group=User, color=User, size=sqrt(DurationInMinutes)/3))+
                 geom_jitter(height = 0, width=0.3)+ 
                 scale_size_identity()+
+                scale_color_brewer(palette = "Dark2")+
                 ylab("Distance in km")+
                 xlab("weekday of activity")+
-                ylim(0,40)
+                ylim(0,input$MaxDistance)+
+                theme(plot.background = element_rect(fill = "#F2E5A5", color = "#F2E5A5"))+
+                theme(legend.background = element_rect(fill = "#F2E5A5", color = "#F2E5A5"))
         }
         ggplotly(p) %>% config(displayModeBar = F)
     })
@@ -216,7 +222,11 @@ server <- function(input, output, session) {
         )
         
         
-        p<- ggplot(newdf, aes(y=Users, x=PartyTime)) + geom_col(fill="darkblue")+coord_flip()
+        p<- ggplot(newdf, aes(y=Users, x=PartyTime)) + geom_col(fill="brown", width=0.5)+
+          scale_x_continuous(expand = c(0.01, 0.01), limits = c(0, 5000))+
+          theme(plot.background = element_rect(fill = "#F2E5A5", color = "#F2E5A5"))+
+          theme(legend.background = element_rect(fill = "#F2E5A5", color = "#F2E5A5"))
+          
         p
         
         
@@ -439,17 +449,16 @@ body <- dashboardBody(
         
         tabItem(tabName = "grzegorzk",
                 fluidRow(
-                    box(status = "danger",
+                    box(status = "danger", width=10,
                       
-                        checkboxGroupInput("Users", "Users", c("User1", "User2", "User3"), c("User1","User2", "User3")),
-                        radioButtons("weekday", "Do you want to see week perspective or day perspective?", c("week", "day"))
+                        radioButtons("weekday", "Do you want to see the activity distribution throughout the week or day?", c("week", "day")),
+                        sliderInput("MaxDistance", "What is the longest distance in km you want to see on the graph?", 10, 500, 40),
+                        plotlyOutput("FirstGKPlot")
                     )
                 ),
                 fluidRow(
-                    box(status = "danger",
-                        plotlyOutput("FirstGKPlot")
-                    ),
-                    box(status = "danger",
+                    box(status = "danger", width=10,
+                        tags$h4(tags$b("The graph shows Party index, which is calculated as the time spent active between 0 AM and 4 AM.")),
                         plotOutput("SecondGKPlot")
                     )
                 )
