@@ -302,14 +302,16 @@ server <- function(input, output, session) {
             )) %>% 
             group_by(User, ActivityType) %>%
             summarise(CarbonFootprint = sum(sladW)/1000)  %>% 
-            mutate(ActivityType = fct_reorder(ActivityType, CarbonFootprint, .desc = FALSE)) %>% 
+            mutate(ActivityType = fct_reorder(ActivityType, CarbonFootprint, .desc = F)) %>% 
             ggplot(aes(x = User,y = CarbonFootprint, fill = ActivityType)) +
             geom_col() +
             theme_bw() +
             labs(title = "Estimated carbon footprint of our travels",
                  y = "Carbon footprint [kg]",
                  x = "")+
-            coord_flip()
+          theme(plot.background = element_rect(fill = "#F2E5A5", color = "#F2E5A5"))+
+          theme(legend.background = element_rect(fill = "#F2E5A5", color = "#F2E5A5"))+
+          coord_flip()
         
         ggplotly(p) %>% config(displayModeBar = F)
         
@@ -319,8 +321,22 @@ server <- function(input, output, session) {
 
     
     output$TypAktywnosci <- plotly::renderPlotly({
+      
+      
+      if(length(input$period) != 0){ 
+      df <- activitydf %>% 
+          mutate(StartTime = as.POSIXct(StartingtimeStampInMS/1000, origin = "1970-01-01")) %>% 
+          mutate(Period = case_when(StartTime <   as.POSIXct(as.Date("2021-12-19")  ) ~ "PW",
+                                  StartTime >   as.POSIXct(as.Date("2022-01-10")) & StartTime <   as.POSIXct(as.Date("2022-01-15")) ~ "PW"  ,
+                                  StartTime >   as.POSIXct(as.Date("2021-12-20")) & StartTime <   as.POSIXct(as.Date("2021-12-23"))  ~ "ZDALNIE",
+                                  StartTime >   as.POSIXct(as.Date("2022-01-03")) & StartTime <   as.POSIXct(as.Date("2022-01-06"))  ~ "ZDALNIE",
+                                  TRUE ~ "WEEKEND"
+            )
+          ) %>% 
+        filter(Period %in% input$period) 
         
-        df <- activitydf %>% 
+        
+            df <- df %>% 
             group_by(User, ActivityType) %>% 
             summarise(odl = sum(Distance)/1000, czas = (sum(EndtimeStampInMS)-sum(StartingtimeStampInMS))/(1000*60*60)  ) %>% 
             filter(User == input$whichUser) %>% 
@@ -332,7 +348,8 @@ server <- function(input, output, session) {
             theme_bw()+
             scale_x_discrete(breaks=df$ActivityType,
                              labels=stri_replace_all_fixed(df$ActivityType, '_', ' ')) +
-            coord_flip()
+            coord_flip()+
+          theme(plot.background = element_rect(fill = "#F2E5A5", color = "#F2E5A5"))
         
         if(input$kategoria == "odl"){
             p <- p +
@@ -345,6 +362,11 @@ server <- function(input, output, session) {
                      y = "Time[h]",
                      x = "")
         }
+        
+      }else{
+        p <-  ggplot()+theme_bw()+theme(plot.background = element_rect(fill = "#F2E5A5", color = "#F2E5A5"))+
+          labs(title = "Select at least one period!")
+      }
         
         ggplotly(p) %>% config(displayModeBar = F)
     })
@@ -363,7 +385,9 @@ server <- function(input, output, session) {
                  x = "")+
             theme_bw() +
             scale_x_continuous(breaks= daty[seq(1, 29, by=4)])+
-            theme(axis.text.x = element_text(angle = 45))
+            theme(axis.text.x = element_text(angle = 45))+
+          theme(plot.background = element_rect(fill = "#F2E5A5", color = "#F2E5A5"))
+        
         ggplotly(p) %>% config(displayModeBar = F)
     }
     )
@@ -429,7 +453,7 @@ body <- dashboardBody(
                     box(status = "danger",
                         selectInput(
                             inputId = "whichUser",
-                            label = "Choose user:",
+                            label = "Select user:",
                             choices = list("User1", "User2", "User3"),
                             selected = "User1"
                         ),
@@ -439,12 +463,23 @@ body <- dashboardBody(
                                      choiceNames = c("Distance", "Time"),
                                      choiceValues = c("odl", "czas"),
                                      selected = "odl"
+                        ),
+                        checkboxGroupInput("period", 
+                                           "Select period:",
+                                           choices = list("Weekends and holidays" ="WEEKEND", 
+                                                          "Normal classes" = "PW",
+                                                          "Online classes" = "ZDALNIE"),
+                                           selected = "PW",
                         )
+                                          
+                        
+                         
                     ),
                     box(status = "danger",
+                        
                         dateRangeInput(
                             inputId = "days",
-                            label = "Choose time:",
+                            label = "Select range of dates:",
                             start = daty[1],
                             end = daty[length(daty)],
                             min = daty[1],
@@ -452,7 +487,8 @@ body <- dashboardBody(
                             format = "yyyy-mm-dd"
                         )
                         
-                    )),
+                    )
+                ),
                 
                 
                 fluidRow(
