@@ -61,7 +61,7 @@ mytheme <- create_theme(
   )
 )
 
-pal <- c("#F2E5A5", "#e74c3c", "#3D210C")
+pal <- c("#F28500", "#e74c3c", "#3D210C")
 
 activitydf <- read.csv("data/dataCSV/ActivitySegmentalmostFinal.csv", encoding = "UTF-8") %>% 
   mutate(ActivityType = ifelse(ActivityType == "IN_PASSENGER_VEHICLE", "IN_CAR", ActivityType))
@@ -358,7 +358,7 @@ server <- function(input, output, session) {
             mutate(ActivityType = fct_reorder(ActivityType, value, .desc = F)) 
         
         p <- ggplot(df, aes(x = ActivityType, y=value) ) +
-            geom_col( fill=pal[3]) +
+            geom_col( fill="brown") +
             theme_bw()+
             scale_x_discrete(breaks=df$ActivityType,
                              labels=stri_replace_all_fixed(df$ActivityType, '_', ' ')) +
@@ -400,7 +400,7 @@ server <- function(input, output, session) {
             theme_bw() +
             scale_x_continuous(breaks= daty[seq(1, 29, by=4)])+
             theme(axis.text.x = element_text(angle = 45))+
-          scale_color_manual(values = pal[1:3])+
+          scale_color_brewer(palette = "Dark2")+
           theme(plot.background = element_rect(fill = "#F2E5A5", color = "#F2E5A5"))+
           theme(legend.background = element_rect(fill = "#F2E5A5", color = "#F2E5A5"))
         
